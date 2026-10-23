@@ -1,0 +1,19 @@
+{
+  "metadata": {
+    "name": "agroclima-nightly-risk",
+    "parentId": "SET_NEBIUS_PROJECT_ID"
+  },
+  "spec": {
+    "image": "SET_IMAGE",
+    "containerCommand": "python",
+    "args": "-m agroclima_agent.jobs.nightly --output /mnt/risk-map.json",
+    "timeout": "3600s",
+    "platform": "SET_CPU_PLATFORM",
+    "preset": "SET_CPU_PRESET",
+    "subnetId": "SET_SUBNET_ID",
+    "disk": {
+      "type": "NETWORK_SSD",
+      "sizeBytes": 21474836480
+    }
+  }
+}

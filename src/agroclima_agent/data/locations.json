@@ -1,0 +1,202 @@
+[
+  {
+    "id": "ahuachapan",
+    "name": "Ahuachapán",
+    "department": "Ahuachapán",
+    "lat": 13.855,
+    "lon": -89.835,
+    "elevation_m": 1290,
+    "coord_type": "slope_point",
+    "source": "Existing AgroClima coffee-zone point; ISC denominación de origen Apaneca-Ilamatepec"
+  },
+  {
+    "id": "apaneca-ahuachapan",
+    "name": "Apaneca",
+    "department": "Ahuachapán",
+    "lat": 13.858822222,
+    "lon": -89.803980555,
+    "elevation_m": 1463,
+    "coord_type": "town_centre",
+    "source": "Wikidata P625, cross-checked with GeoNames; ISC denominación de origen Apaneca-Ilamatepec"
+  },
+  {
+    "id": "concepcion-de-ataco-ahuachapan",
+    "name": "Concepción de Ataco",
+    "department": "Ahuachapán",
+    "lat": 13.870338888,
+    "lon": -89.8509,
+    "elevation_m": 1255,
+    "coord_type": "town_centre",
+    "source": "Wikidata P625, cross-checked with GeoNames; ISC denominación de origen Apaneca-Ilamatepec"
+  },
+  {
+    "id": "chalatenango",
+    "name": "Chalatenango",
+    "department": "Chalatenango",
+    "lat": 14.33,
+    "lon": -89.16,
+    "elevation_m": 1237,
+    "coord_type": "slope_point",
+    "source": "Existing AgroClima coffee-zone point; ISC denominación de origen Alotepec-Metapán"
+  },
+  {
+    "id": "la-palma-chalatenango",
+    "name": "La Palma",
+    "department": "Chalatenango",
+    "lat": 14.317291666,
+    "lon": -89.170480555,
+    "elevation_m": 1003,
+    "coord_type": "town_centre",
+    "source": "Wikidata P625, cross-checked with GeoNames; ISC denominación de origen Alotepec-Metapán"
+  },
+  {
+    "id": "san-fernando-chalatenango",
+    "name": "San Fernando",
+    "department": "Chalatenango",
+    "lat": 14.307897222,
+    "lon": -89.024352777,
+    "elevation_m": 990,
+    "coord_type": "town_centre",
+    "source": "Wikidata P625, cross-checked with GeoNames; ISC denominación de origen Alotepec-Metapán"
+  },
+  {
+    "id": "san-ignacio-chalatenango",
+    "name": "San Ignacio",
+    "department": "Chalatenango",
+    "lat": 14.338713888,
+    "lon": -89.178491666,
+    "elevation_m": 1005,
+    "coord_type": "town_centre",
+    "source": "Wikidata P625, cross-checked with GeoNames; ISC denominación de origen Alotepec-Metapán"
+  },
+  {
+    "id": "comasagua-la-libertad",
+    "name": "Comasagua",
+    "department": "La Libertad",
+    "lat": 13.637302777,
+    "lon": -89.376808333,
+    "elevation_m": 1075,
+    "coord_type": "town_centre",
+    "source": "Wikidata P625, cross-checked with GeoNames; ISC denominación de origen Bálsamo-Quezaltepec"
+  },
+  {
+    "id": "jayaque-la-libertad",
+    "name": "Jayaque",
+    "department": "La Libertad",
+    "lat": 13.674086111,
+    "lon": -89.438041666,
+    "elevation_m": 992,
+    "coord_type": "town_centre",
+    "source": "Wikidata P625, cross-checked with GeoNames; ISC denominación de origen Bálsamo-Quezaltepec"
+  },
+  {
+    "id": "santa-tecla-la-libertad",
+    "name": "Santa Tecla",
+    "department": "La Libertad",
+    "lat": 13.673722222,
+    "lon": -89.288597222,
+    "elevation_m": 927,
+    "coord_type": "town_centre",
+    "source": "Wikidata P625, cross-checked with GeoNames; ISC denominación de origen Bálsamo-Quezaltepec"
+  },
+  {
+    "id": "talnique-la-libertad",
+    "name": "Talnique",
+    "department": "La Libertad",
+    "lat": 13.667311111,
+    "lon": -89.407963888,
+    "elevation_m": 976,
+    "coord_type": "town_centre",
+    "source": "Wikidata P625, cross-checked with GeoNames; ISC denominación de origen Bálsamo-Quezaltepec"
+  },
+  {
+    "id": "tepecoyo-la-libertad",
+    "name": "Tepecoyo",
+    "department": "La Libertad",
+    "lat": 13.700705555,
+    "lon": -89.4657,
+    "elevation_m": 792,
+    "coord_type": "town_centre",
+    "source": "Wikidata P625, cross-checked with GeoNames; ISC denominación de origen Bálsamo-Quezaltepec"
+  },
+  {
+    "id": "perquin-morazan",
+    "name": "Perquín",
+    "department": "Morazán",
+    "lat": 13.958488888,
+    "lon": -88.161375,
+    "elevation_m": 1229,
+    "coord_type": "town_centre",
+    "source": "Wikidata P625, cross-checked with GeoNames; ISC denominación de origen Cacahuatique"
+  },
+  {
+    "id": "san-fernando-morazan",
+    "name": "San Fernando",
+    "department": "Morazán",
+    "lat": 13.961519444,
+    "lon": -88.197872222,
+    "elevation_m": 985,
+    "coord_type": "town_centre",
+    "source": "Wikidata P625, cross-checked with GeoNames; ISC denominación de origen Cacahuatique"
+  },
+  {
+    "id": "santa-ana",
+    "name": "Santa Ana",
+    "department": "Santa Ana",
+    "lat": 13.88,
+    "lon": -89.61,
+    "elevation_m": 1432,
+    "coord_type": "slope_point",
+    "source": "Existing AgroClima coffee-zone point; ISC denominación de origen Apaneca-Ilamatepec"
+  },
+  {
+    "id": "juayua-sonsonate",
+    "name": "Juayúa",
+    "department": "Sonsonate",
+    "lat": 13.843197222,
+    "lon": -89.746475,
+    "elevation_m": 1038,
+    "coord_type": "town_centre",
+    "source": "Wikidata P625, cross-checked with GeoNames; ISC denominación de origen Apaneca-Ilamatepec"
+  },
+  {
+    "id": "salcoatitan-sonsonate",
+    "name": "Salcoatitán",
+    "department": "Sonsonate",
+    "lat": 13.829922222,
+    "lon": -89.757566666,
+    "elevation_m": 1041,
+    "coord_type": "town_centre",
+    "source": "Wikidata P625, cross-checked with GeoNames; ISC denominación de origen Apaneca-Ilamatepec"
+  },
+  {
+    "id": "alegria-usulutan",
+    "name": "Alegría",
+    "department": "Usulután",
+    "lat": 13.507963888,
+    "lon": -88.489433333,
+    "elevation_m": 1150,
+    "coord_type": "town_centre",
+    "source": "Wikidata P625, cross-checked with GeoNames; ISC denominación de origen Tecapa-Chinameca"
+  },
+  {
+    "id": "berlin-usulutan",
+    "name": "Berlín",
+    "department": "Usulután",
+    "lat": 13.497102777,
+    "lon": -88.530319444,
+    "elevation_m": 1012,
+    "coord_type": "town_centre",
+    "source": "Wikidata P625, cross-checked with GeoNames; ISC denominación de origen Tecapa-Chinameca"
+  },
+  {
+    "id": "santiago-de-maria-usulutan",
+    "name": "Santiago de María",
+    "department": "Usulután",
+    "lat": 13.482194444,
+    "lon": -88.465266666,
+    "elevation_m": 892,
+    "coord_type": "town_centre",
+    "source": "Wikidata P625, cross-checked with GeoNames; ISC denominación de origen Tecapa-Chinameca"
+  }
+]
