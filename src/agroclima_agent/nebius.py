@@ -140,6 +140,15 @@ class NebiusClient:
         try:
             with httpx.Client(transport=self._transport, timeout=timeout) as client:
                 response = client.post(url, headers=headers, json=payload)
+        except httpx.TimeoutException:
+            return Completion(
+                text=mock_text,
+                model=model,
+                mock=False,
+                tokens=None,
+                latency_ms=(time.perf_counter() - started) * 1000,
+                error="timeout",
+            )
         except httpx.HTTPError:
             return Completion(
                 text=mock_text,

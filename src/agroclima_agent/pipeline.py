@@ -6,17 +6,25 @@ Risk levels and technician handoff are fixed before any plan narrative call.
 from __future__ import annotations
 
 import json
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
+from urllib.parse import quote
 
 from agroclima_agent.alerts import AlertSearch, Citation
 from agroclima_agent.audit import AuditLog, AuditRecord, sha256_bytes, sha256_text
 from agroclima_agent.config import Settings
 from agroclima_agent.diagnosis import (
+    CONSULT_LABEL,
     HistogramDiagnoser,
     InterpretedDiagnosis,
     LeafDiagnoser,
     NvidiaVisionDiagnoser,
+    ORIENTATION_TAG,
+    PATH_COLOUR,
+    PATH_VISION,
+    VisionAttempt,
     interpret,
+    public_leaf_copy,
+    trust_sentence_for,
 )
 from agroclima_agent.handoff import CENTA_LINE, Decision, decide
 from agroclima_agent.nebius import NANO_SYSTEM, PLAN_SYSTEM, NebiusClient
@@ -316,35 +324,38 @@ def run_agent(
     )
 
     diagnosis: InterpretedDiagnosis | None = None
-    baseline_read = None
     vision_mock = not settings.nebius_configured
     if image:
-        baseline_read = baseline.diagnose(image, media_type or "image/jpeg")
+        media = media_type or "image/jpeg"
+        attempted = _call_vision(vision, image, media)
+        if attempted.error or attempted.read is None:
+            colour_read = baseline.diagnose(image, media)
+            diagnosis = replace(interpret(colour_read), plan_allowed=False)
+            farmer = public_leaf_copy(colour_read)
+            diag_mock = not settings.nebius_configured
+            model_id = colour_read.model_id
+            path = PATH_COLOUR
+            diag_latency = 0.0
+            diag_tokens = None
+        else:
+            diagnosis = interpret(attempted.read)
+            farmer = public_leaf_copy(attempted.read)
+            diag_mock = False
+            model_id = attempted.read.model_id
+            path = PATH_VISION
+            diag_latency = attempted.latency_ms or 0.0
+            diag_tokens = attempted.tokens
         audit.write(
             AuditRecord(
-                step="diagnostico-baseline",
+                step="diagnostico",
                 input_sha256=sha256_bytes(image),
-                model_id=baseline_read.model_id,
-                latency_ms=0,
-                tokens=None,
-                mock=False,
+                model_id=model_id,
+                latency_ms=diag_latency,
+                tokens=diag_tokens,
+                mock=diag_mock,
+                path=path,
             )
         )
-        read = vision.diagnose(image, media_type or "image/jpeg")
-        if read.mock:
-            diagnosis = None
-            farmer = (
-                "No llamamos al modelo de visión de NVIDIA. No hay diagnóstico de la hoja. "
-                f"La línea de base local (histograma de color) marcó «{baseline_read.label}». "
-                "Esa línea de base no autoriza un plan."
-            )
-            diag_mock = True
-            model_id = read.model_id
-        else:
-            diagnosis = interpret(read)
-            farmer = f"{diagnosis.headline}. {diagnosis.detail}"
-            diag_mock = False
-            model_id = read.model_id
         diag_step = StepResult(
             id="diagnostico",
             title="Diagnóstico",
@@ -352,23 +363,16 @@ def run_agent(
             farmer_text=farmer,
             citations=[],
             model_id=model_id,
-            latency_ms=None,
-            tokens=None,
+            latency_ms=diag_latency,
+            tokens=diag_tokens,
             input_sha256=sha256_bytes(image),
             detail={
-                "vision": {
-                    "label": read.label,
-                    "confidence": read.confidence,
-                    "mock": read.mock,
-                    "model_id": read.model_id,
-                },
-                "baseline": {
-                    "label": baseline_read.label,
-                    "confidence": baseline_read.confidence,
-                    "model_id": baseline_read.model_id,
-                },
-                "agreement": read.label == baseline_read.label,
-                "note": "The histogram baseline is for evaluation. It does not set the plan.",
+                "path": path,
+                "label": diagnosis.read.label,
+                "model_id": model_id,
+                "trust_sentence": trust_sentence_for(path),
+                "orientation_tag": ORIENTATION_TAG,
+                "consult_label": CONSULT_LABEL,
             },
         )
     else:
@@ -449,6 +453,11 @@ def run_agent(
                 answer = REFUSAL
     if answer:
         plan_text = f"{plan_text}\n\nPregunta: {answer}"
+    if image is not None:
+        payload = decision.handoff_text.strip() or f"{CONSULT_LABEL}. {CENTA_LINE}"
+        diag_step.detail["consult_href"] = "https://wa.me/?text=" + quote(payload)
+    published = decision.as_dict()
+    published.pop("diagnosis_band", None)
     plan_step = StepResult(
         id="plan",
         title="Plan",
@@ -459,7 +468,7 @@ def run_agent(
         latency_ms=plan_completion.latency_ms,
         tokens=plan_completion.tokens,
         input_sha256=sha256_text(json.dumps(decision.as_dict(), sort_keys=True)),
-        detail={"decision": decision.as_dict(), "source": "deterministic-rules"},
+        detail={"decision": published, "source": "deterministic-rules"},
     )
     return AgentResult(
         mock=settings.mock,
@@ -467,6 +476,16 @@ def run_agent(
         department=department,
         steps=[clima_step, alert_step, diag_step, plan_step],
     )
+
+
+def _call_vision(vision: LeafDiagnoser, image: bytes, media_type: str) -> VisionAttempt:
+    attempt = getattr(vision, "attempt", None)
+    if callable(attempt):
+        return attempt(image, media_type)
+    read = vision.diagnose(image, media_type)
+    if read.mock:
+        return VisionAttempt(None, "unconfigured", None, None)
+    return VisionAttempt(read, None, None, None)
 
 
 def decision_window_allowed(

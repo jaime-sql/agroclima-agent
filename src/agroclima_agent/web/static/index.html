@@ -111,6 +111,23 @@
     .day.medio { background: var(--amber-soft); color: var(--amber); }
     .day.bajo { background: var(--green-soft); color: var(--green); }
     .error { color: var(--red); }
+    .trust, .orientation {
+      color: #6e6a64;
+      font-size: 0.95rem;
+      margin: 10px 0 0;
+    }
+    a.consult {
+      display: inline-block;
+      width: auto;
+      margin-top: 12px;
+      background: white;
+      color: var(--green);
+      border: 1px solid var(--green);
+      border-radius: 12px;
+      padding: 10px 14px;
+      font-weight: 700;
+      text-decoration: none;
+    }
   </style>
 </head>
 <body>
@@ -134,7 +151,7 @@
     <div id="results"></div>
     <footer>
       Risk thresholds are our own estimate and have not been validated by ISC, CENTA, or MAG.
-      NVIDIA open models run on Nebius Token Factory when a key is set. The colour histogram is a baseline, not a diagnosis.
+      NVIDIA Nemotron-3.5-Super-VL reads the leaf on Nebius Token Factory when a key is set. If that call fails, a colour model answers. Neither line is a diagnosis.
     </footer>
   </main>
   <script>
@@ -201,6 +218,16 @@
         bits.push("input " + step.input_sha256.slice(0, 12));
         card.appendChild(el("p", "meta", bits.join(" · ")));
         card.appendChild(el("div", "farmer", step.farmer_text));
+        const detail = step.detail || {};
+        if (detail.trust_sentence) card.appendChild(el("p", "trust", detail.trust_sentence));
+        if (detail.orientation_tag) card.appendChild(el("p", "orientation", detail.orientation_tag));
+        if (detail.consult_label && detail.consult_href) {
+          const consult = el("a", "consult", detail.consult_label);
+          consult.href = detail.consult_href;
+          consult.target = "_blank";
+          consult.rel = "noopener noreferrer";
+          card.appendChild(consult);
+        }
         const days = step.detail && step.detail.days;
         if (Array.isArray(days) && days.length) {
           const row = el("div", "days");

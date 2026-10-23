@@ -76,8 +76,8 @@ flowchart LR
   Tavily --> Cache
   Cache --> Guard[Injection guard]
   Guard --> Nano[Nemotron Nano]
-  Pipe --> Vision[NVIDIA vision model]
-  Pipe --> Hist[Colour-histogram baseline]
+  Pipe --> Vision[Nemotron vision]
+  Vision -->|error or timeout| Hist[Colour model]
   Vision --> Eval[Eval hook]
   Hist --> Eval
   Pipe --> Rules[Handoff and thresholds]
@@ -90,7 +90,7 @@ flowchart LR
   Pipe --> Audit[Audit log]
 ```
 
-Clima scores each coffee municipality in the chosen department and keeps the worst level. Alertas reads a shared cache of official rust notices (CENTA, MAG, ISC, OIRSA, IICA, FAO) and treats that text as data. Diagnóstico sends the photo to the vision model. The histogram runs beside it and is scored by `agroclima-eval`; it never authorizes a product. Plan fills class name, dose note, spray window, and handoff from the rules, then asks Super or Ultra to say that decision in Spanish. A numeric dose in the model text is discarded.
+Clima scores each coffee municipality in the chosen department and keeps the worst level. Alertas reads a shared cache of official rust notices (CENTA, MAG, ISC, OIRSA, IICA, FAO) and treats that text as data. Diagnóstico sends the photo to `nvidia/Nemotron-3.5-Super-VL`. If that call errors or times out, the colour model answers and the audit log records which path was used. The colour model does not authorize a product. The page hides per-leaf confidence. Plan fills class name, dose note, spray window, and handoff from the rules, then asks Super or Ultra to say that decision in Spanish. A numeric dose in the model text is discarded.
 
 ## Tavily budget
 

@@ -5,6 +5,7 @@ from io import BytesIO
 from agroclima_agent.config import Settings
 from agroclima_agent.open_meteo import FixtureSource
 from agroclima_agent.risk import synthetic_forecast
+from agroclima_agent.trust_sentences import COLOUR_TRUST_SENTENCE
 from agroclima_agent.web.app import create_app
 
 
@@ -47,6 +48,9 @@ def test_health_page_and_mock_run(tmp_path):
     assert page.status_code == 200
     assert "Clima → Alertas oficiales → Diagnóstico → Plan" in page.text
     assert "Mock mode" in page.text
+    assert "trust_sentence" in page.text
+    assert "orientation_tag" in page.text
+    assert "consult_href" in page.text
 
     departments = client.get("/api/departments").json()["departments"]
     assert "Santa Ana" in departments
@@ -70,9 +74,19 @@ def test_health_page_and_mock_run(tmp_path):
     assert with_photo.status_code == 200
     diagnosis = with_photo.json()["steps"][2]
     assert diagnosis["mock"] is True
-    assert diagnosis["detail"]["baseline"]["label"] == "sana"
-    assert diagnosis["detail"]["note"].startswith("The histogram baseline")
+    assert diagnosis["detail"]["path"] == "colour-lr"
+    assert diagnosis["detail"]["label"] == "sana"
+    assert diagnosis["detail"]["trust_sentence"] == COLOUR_TRUST_SENTENCE
+    assert "89%" not in diagnosis["detail"]["trust_sentence"]
+    assert "Orientativo" not in diagnosis["detail"]["trust_sentence"]
+    assert "fotografiadas sobre fondo blanco, no en el campo" in diagnosis["detail"]["trust_sentence"]
+    assert diagnosis["detail"]["orientation_tag"] == "Orientativo — no es un diagnóstico"
+    assert diagnosis["detail"]["consult_label"] == "Consultar a un técnico"
+    assert diagnosis["detail"]["consult_href"].startswith("https://wa.me/?text=")
+    assert "Seguro" not in diagnosis["farmer_text"]
+    assert "%" not in diagnosis["farmer_text"]
     assert with_photo.json()["steps"][3]["detail"]["decision"]["plan_allowed"] is False
+    assert "diagnosis_band" not in with_photo.json()["steps"][3]["detail"]["decision"]
 
     unknown = client.post("/api/run", data={"department": "Narnia"})
     assert unknown.status_code == 400

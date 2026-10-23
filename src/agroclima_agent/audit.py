@@ -26,6 +26,7 @@ class AuditRecord:
     tokens: dict | None
     mock: bool
     credits: int | None = None
+    path: str | None = None
 
     def as_dict(self) -> dict:
         return {
@@ -37,6 +38,7 @@ class AuditRecord:
             "tokens": self.tokens,
             "mock": self.mock,
             "credits": self.credits,
+            "path": self.path,
         }
 
 
