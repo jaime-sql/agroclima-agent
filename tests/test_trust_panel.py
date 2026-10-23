@@ -72,8 +72,11 @@ def _run(tmp_path, vision_response):
         assert "tavily" not in str(request.url)
         body = json.loads(request.content.decode())
         if body["model"] == "nvidia/Nemotron-3.5-Super-VL":
-            content = body["messages"][1]["content"]
-            assert isinstance(content, list)
+            content = next(
+                message["content"]
+                for message in body["messages"]
+                if isinstance(message.get("content"), list)
+            )
             assert any(part.get("type") == "image_url" for part in content)
             if isinstance(vision_response, Exception):
                 raise vision_response

@@ -5,7 +5,8 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 
-from agroclima_agent.nebius import VISION_INSTRUCTION, NebiusClient
+from agroclima_agent.frozen_vision import load_frozen_vision, vision_call
+from agroclima_agent.nebius import NebiusClient
 from agroclima_agent.trust_sentences import COLOUR_TRUST_SENTENCE, NEMOTRON_TRUST_SENTENCE
 
 LABELS = ("roya", "sana", "otro", "retomar")
@@ -89,19 +90,23 @@ class NvidiaVisionDiagnoser(LeafDiagnoser):
         """Call Token Factory. A missing key does not open a connection."""
         if not self.client.settings.nebius_configured:
             return VisionAttempt(None, "unconfigured", None, None)
+        frozen = vision_call(load_frozen_vision())
         completion = self.client.complete(
             step="diagnostico-vision",
-            model=self.model_id,
-            user_text=VISION_INSTRUCTION,
+            model=str(frozen["model"]),
+            user_text=str(frozen["prompt"]),
             mock_text="",
-            system="You only return the JSON object requested in the user message.",
+            system=None,
             image=(image, media_type),
+            temperature=float(frozen["temperature"]),
+            max_tokens=int(frozen["max_tokens"]),
+            chat_template_kwargs=frozen["chat_template_kwargs"],
         )
         if completion.error:
             return VisionAttempt(None, completion.error, completion.latency_ms, completion.tokens)
         if completion.mock:
             return VisionAttempt(None, "mock", completion.latency_ms, completion.tokens)
-        read = vision_answer(completion.text, self.model_id)
+        read = vision_answer(completion.text, str(frozen["model"]))
         if read is None:
             return VisionAttempt(None, "bad_payload", completion.latency_ms, completion.tokens)
         return VisionAttempt(read, None, completion.latency_ms, completion.tokens)

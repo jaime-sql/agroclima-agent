@@ -14,6 +14,8 @@ Live inference uses the Nebius Token Factory OpenAI-compatible API (`NEBIUS_BASE
 | Action-plan wording | `NEBIUS_MODEL_PLAN` | `nvidia/nemotron-3-super-120b-a12b` (set `nvidia/Nemotron-3-Ultra-550b-a55b` for Ultra) |
 | Leaf photo | `NEBIUS_MODEL_VISION` | `nvidia/Nemotron-3.5-Super-VL` |
 
+The leaf call loads `src/agroclima_agent/data/frozen_config.json` at runtime and sends that file’s prompt v1 unchanged, with temperature 0, reasoning off (`enable_thinking` false), and `max_tokens` 200.
+
 The nightly department map does not call a model. It only reads Open-Meteo and the rules in [docs/rust-risk-rules.md](docs/rust-risk-rules.md).
 
 ## Run

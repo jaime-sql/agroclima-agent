@@ -1,0 +1,44 @@
+{
+ "concurrency": 8,
+ "endpoint": "https://api.tokenfactory.nebius.com/v1/chat/completions",
+ "few_shot": "none",
+ "image_prep": "source 512x256 JPEG, longest edge<=1280 (no-op), re-encode JPEG q=0.82, base64 data URL",
+ "label_map": {
+  "otro": "other",
+  "retomar": "ABSTAIN",
+  "roya": "rust",
+  "sana": "healthy",
+  "unparsed": "ABSTAIN"
+ },
+ "max_tokens": 200,
+ "model": "nvidia/Nemotron-3.5-Super-VL",
+ "prompt": "You are a coffee-leaf disease diagnoser. Look at this coffee leaf photo. Answer with label 'roya' if coffee leaf rust (Hemileia vastatrix: yellow-orange powdery pustules/spots, often on underside) is the main problem, 'sana' if the leaf looks healthy, 'otro' if another problem dominates (leaf miner trails, phoma dark necrotic lesions, cercospora brown eye spots with pale halo), or 'retomar' if the photo is unusable. Give confidence 0-1. Reply only JSON.",
+ "prompt_version": "v1",
+ "reasoning": "off via chat_template_kwargs.enable_thinking=false",
+ "response_format": "json_schema strict",
+ "retries": "429/5xx/transport only, up to 6 attempts, exp backoff",
+ "schema": {
+  "properties": {
+   "confidence": {
+    "maximum": 1,
+    "minimum": 0,
+    "type": "number"
+   },
+   "label": {
+    "enum": [
+     "roya",
+     "sana",
+     "otro",
+     "retomar"
+    ],
+    "type": "string"
+   }
+  },
+  "required": [
+   "label",
+   "confidence"
+  ],
+  "type": "object"
+ },
+ "temperature": 0
+}
