@@ -64,9 +64,10 @@ def test_mock_run_keeps_rules_ahead_of_the_plan_model(tmp_path):
     titles = [step.title for step in result.steps]
     assert titles == ["Clima", "Alertas oficiales", "Diagnóstico", "Plan"]
     assert result.mock is True
-    assert result.steps[1].mock is True
-    assert result.steps[1].citations[0].mock is True
-    assert "not a live official alert" in result.steps[1].citations[0].title
+    assert result.steps[1].mock is False
+    assert result.steps[1].citations[0].stale is True
+    assert "sin actualizar" in result.steps[1].citations[0].title
+    assert result.steps[1].model_id == "template/fallback"
     plan_calls = [call for call in client.calls if call["step"] == "plan"]
     assert plan_calls
     assert plan_calls[0]["model"] == settings.model_plan

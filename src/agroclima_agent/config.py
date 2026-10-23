@@ -1,4 +1,4 @@
-"""Environment-only settings. Missing keys select labelled mock mode."""
+"""Environment-only settings. A missing Nebius key selects labelled mock mode."""
 
 from __future__ import annotations
 
@@ -50,6 +50,7 @@ class Settings:
     tavily_total_cap: int = DEFAULT_TAVILY_TOTAL_CAP
     tavily_cache_path: Path = field(default_factory=lambda: Path("var/tavily-cache.json"))
     tavily_counter_path: Path = field(default_factory=lambda: Path("var/tavily-usage.json"))
+    technician_whatsapp: str | None = None
 
     @property
     def nebius_configured(self) -> bool:
@@ -61,15 +62,13 @@ class Settings:
 
     @property
     def mock(self) -> bool:
-        return not self.nebius_configured or not self.tavily_configured
+        """Model mock only. A missing Tavily key does not mock the whole app."""
+        return not self.nebius_configured
 
     def mock_reasons(self) -> list[str]:
-        reasons: list[str] = []
         if not self.nebius_configured:
-            reasons.append("NEBIUS_API_KEY is not set")
-        if not self.tavily_configured:
-            reasons.append("TAVILY_API_KEY is not set")
-        return reasons
+            return ["NEBIUS_API_KEY is not set"]
+        return []
 
 
 def load_settings() -> Settings:
@@ -93,4 +92,5 @@ def load_settings() -> Settings:
         tavily_total_cap=_positive_int("TAVILY_TOTAL_CAP", DEFAULT_TAVILY_TOTAL_CAP),
         tavily_cache_path=Path(_blank("AGROCLIMA_TAVILY_CACHE") or "var/tavily-cache.json"),
         tavily_counter_path=Path(_blank("AGROCLIMA_TAVILY_COUNTER") or "var/tavily-usage.json"),
+        technician_whatsapp=_blank("TECHNICIAN_WHATSAPP"),
     )

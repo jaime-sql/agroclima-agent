@@ -82,7 +82,8 @@ def test_health_page_and_mock_run(tmp_path):
     assert "fotografiadas sobre fondo blanco, no en el campo" in diagnosis["detail"]["trust_sentence"]
     assert diagnosis["detail"]["orientation_tag"] == "Orientativo — no es un diagnóstico"
     assert diagnosis["detail"]["consult_label"] == "Consultar a un técnico"
-    assert diagnosis["detail"]["consult_href"].startswith("https://wa.me/?text=")
+    assert diagnosis["detail"]["consult_href"] == "#tecnico"
+    assert "wa.me" not in diagnosis["detail"]["consult_href"]
     assert "Seguro" not in diagnosis["farmer_text"]
     assert "%" not in diagnosis["farmer_text"]
     assert with_photo.json()["steps"][3]["detail"]["decision"]["plan_allowed"] is False

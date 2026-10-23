@@ -10,6 +10,8 @@ from fastapi.staticfiles import StaticFiles
 
 from agroclima_agent.audit import AuditLog, tavily_usage
 from agroclima_agent.config import Settings, load_settings
+from agroclima_agent.diagnosis import CONSULT_LABEL
+from agroclima_agent.handoff import technician_href
 from agroclima_agent.open_meteo import ForecastSource, OpenMeteoSource
 from agroclima_agent.pipeline import run_agent
 from agroclima_agent.places import departments, places_in
@@ -42,6 +44,11 @@ def create_app(settings: Settings | None = None, source: ForecastSource | None =
                 "plan": settings.model_plan,
                 "vision": settings.model_vision,
             },
+            "consult_label": CONSULT_LABEL,
+            "consult_href": technician_href(
+                settings.technician_whatsapp,
+                "Consulta sobre roya del cafeto",
+            ),
         }
 
     @app.get("/api/departments")

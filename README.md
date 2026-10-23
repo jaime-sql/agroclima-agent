@@ -24,7 +24,7 @@ The nightly department map does not call a model. It only reads Open-Meteo and t
 ./run
 ```
 
-Then open http://127.0.0.1:8000. The first run creates `.venv` and installs the package. With `NEBIUS_API_KEY` or `TAVILY_API_KEY` unset, the page shows a mock-mode banner and those steps are labelled samples. CI uses that path and does not need keys.
+Then open http://127.0.0.1:8000. The first run creates `.venv` and installs the package. With `NEBIUS_API_KEY` unset, the page shows a mock-mode banner and the model steps are labelled samples. An empty `TAVILY_API_KEY` does not raise that banner: alerts stay «sin actualizar». CI uses empty keys and does not need secrets.
 
 ```bash
 pip install -e ".[dev]"
@@ -54,7 +54,8 @@ The web form asks for a department, an optional leaf photo, and an optional ques
 | --- | --- | --- |
 | `NEBIUS_API_KEY` | Live models | Token Factory key. Empty → mock model steps |
 | `NEBIUS_BASE_URL` | No | Default `https://api.tokenfactory.nebius.com/v1` |
-| `TAVILY_API_KEY` | Live alert refresh | Tavily key. Empty → mock citation. Page loads never call Tavily |
+| `TAVILY_API_KEY` | Live alert refresh | Tavily key. Empty → alerts stay «sin actualizar» and the rest of the app stays live. Page loads never call Tavily |
+| `TECHNICIAN_WHATSAPP` | No | Digits only, country code included. Empty → «Consultar a un técnico» stays on this page |
 | `TAVILY_DAILY_CAP` | No | Default `40`. After this many basic searches in a local day, refresh stops |
 | `TAVILY_TOTAL_CAP` | No | Default `300` (dev/testing budget inside the 1,500 credit monthly account) |
 | `NEBIUS_MODEL_NANO` | No | Nano id above |

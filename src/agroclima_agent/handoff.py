@@ -17,6 +17,7 @@ from agroclima_agent.risk import (
 )
 
 CENTA_LINE = "CENTA: (503) 2397-2200, https://www.centa.gob.sv"
+TECHNICIAN_PAGE = "#tecnico"
 
 
 @dataclass(frozen=True)
@@ -91,6 +92,16 @@ def _worst_day(days: list[DayAssessment]) -> DayAssessment | None:
 
 
 LEVEL_RANK = {"bajo": 1, "medio": 2, "alto": 3}
+
+
+def technician_href(number: str | None, message: str) -> str:
+    """WhatsApp when TECHNICIAN_WHATSAPP is set. Otherwise an in-page note."""
+    from urllib.parse import quote
+
+    digits = "".join(ch for ch in (number or "") if ch.isdigit())
+    if not digits:
+        return TECHNICIAN_PAGE
+    return f"https://wa.me/{digits}?text={quote(message)}"
 
 
 def _window_text(window: SprayWindow | None) -> str | None:

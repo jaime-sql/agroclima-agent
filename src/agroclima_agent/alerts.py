@@ -95,9 +95,9 @@ class AlertSearch:
         """Serve the shared cache. This method never calls Tavily."""
         started = time.perf_counter()
         if not self.settings.tavily_configured:
-            citations = [_mock_citation()]
-            mock = True
-            model_id = "mock"
+            citations = [_stale_notice(department)]
+            mock = False
+            model_id = "template/fallback"
         else:
             citations = self._cached(department)
             mock = False
@@ -111,7 +111,7 @@ class AlertSearch:
         A page load must not call this. The nightly risk job must not call this.
         """
         if not self.settings.tavily_configured:
-            return [_mock_citation()]
+            return [_stale_notice(department)]
         entry = self._entry(department)
         if entry is not None and self._is_fresh(entry):
             return _citations_from(entry, stale=False)
@@ -264,20 +264,6 @@ class AlertSearch:
                 credits=0,
             )
         )
-
-
-def _mock_citation() -> Citation:
-    return Citation(
-        title="[mock] Sample citation — not a live official alert",
-        url="https://www.centa.gob.sv/",
-        snippet=(
-            "Mock mode: Tavily was not called. This row shows where a citation will appear. "
-            "It is not a current rust bulletin."
-        ),
-        official=False,
-        mock=True,
-        stale=False,
-    )
 
 
 def _stale_notice(department: str) -> Citation:

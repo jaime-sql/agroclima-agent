@@ -113,7 +113,7 @@ def _panel(result):
     detail = step.detail
     assert detail["orientation_tag"] == ORIENTATION_TAG
     assert detail["consult_label"] == CONSULT_LABEL
-    assert detail["consult_href"].startswith("https://wa.me/?text=")
+    assert detail["consult_href"] == "#tecnico"
     assert "confidence" not in detail
     for word in ("Seguro", "Probable", "No seguro", "confianza"):
         assert word not in step.farmer_text

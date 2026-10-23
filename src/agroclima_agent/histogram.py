@@ -37,7 +37,7 @@ def read_histogram(image: bytes) -> LeafRead:
             elif 50 <= hue <= 120:
                 green += 1
     colored = orange + green
-    if colored < total * 0.15:
+    if colored < total * 0.15 or green / total < 0.25:
         return LeafRead("retomar", 0.2, "no_hoja", "colour-histogram-baseline", False)
     ratio = orange / colored
     if ratio >= 0.12:

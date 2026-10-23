@@ -135,6 +135,7 @@
     <h1>AgroClima Agent</h1>
     <p class="lede">Coffee leaf rust guidance for El Salvador. The page chrome is English. Text for the farmer is Spanish.</p>
     <p class="flow">Clima → Alertas oficiales → Diagnóstico → Plan</p>
+    <p><a id="consult-tecnico" class="consult" href="#tecnico">Consultar a un técnico</a></p>
     <div id="banner" class="banner" hidden></div>
   </header>
   <main>
@@ -149,6 +150,11 @@
       <p id="status" class="meta" role="status"></p>
     </form>
     <div id="results"></div>
+    <section id="tecnico">
+      <h2>Consultar a un técnico</h2>
+      <p>No technician number is configured on this page. Ask your cooperative, or read the public CENTA site.</p>
+      <p><a href="https://www.centa.gob.sv/">CENTA</a></p>
+    </section>
     <footer>
       Risk thresholds are our own estimate and have not been validated by ISC, CENTA, or MAG.
       NVIDIA Nemotron-3.5-Super-VL reads the leaf on Nebius Token Factory when a key is set. If that call fails, a colour model answers. Neither line is a diagnosis.
@@ -169,7 +175,10 @@
       return node;
     }
 
+    const consult = document.querySelector("#consult-tecnico");
     fetch("/api/health").then((response) => response.json()).then((health) => {
+      if (health.consult_href && consult) consult.href = health.consult_href;
+      if (health.consult_label && consult) consult.textContent = health.consult_label;
       if (!health.mock) return;
       banner.hidden = false;
       banner.textContent = "Mock mode. " + (health.mock_reasons || []).join(". ") + ". Model and search replies below are labelled samples, not live output.";

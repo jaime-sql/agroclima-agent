@@ -22,7 +22,7 @@ Baseline: [jaime-sql/agroclima](https://github.com/jaime-sql/agroclima) at `3964
 | Risk map | Computed when a place is opened | Nightly Nebius Serverless AI job writes a per-department map. The job does not call a model |
 | Who decides the level and the handoff | Rules for the level; the ask model could still talk about the plan | Rules decide the level, the plan fields, and whether a technician is needed. The model only narrates that decision, and a dose in the narration is dropped |
 | Safety log | Ask-path headers and log lines | JSONL audit per step: hashed inputs, model id, latency, tokens when the API returns them. PII is redacted before the call |
-| Keys | Worker secrets, empty diagnosis until `OPENAI_API_KEY` | `NEBIUS_API_KEY` and `TAVILY_API_KEY`. With either missing, that part runs in labelled mock mode so CI needs no secrets |
+| Keys | Worker secrets, empty diagnosis until `OPENAI_API_KEY` | `NEBIUS_API_KEY` missing turns on labelled mock mode for the models. `TAVILY_API_KEY` missing leaves alerts «sin actualizar» and does not mock the app. CI needs no secrets |
 | UI | Spanish mobile flow, map, speech | English page with four steps: Clima → Alertas oficiales → Diagnóstico → Plan. Farmer text stays Spanish |
 | Location | Phone GPS rounded to 3 decimals, or a picked municipality | Department picker only. Precise coordinates are redacted if they show up in free text |
 

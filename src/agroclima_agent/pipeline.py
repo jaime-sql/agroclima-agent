@@ -6,8 +6,8 @@ Risk levels and technician handoff are fixed before any plan narrative call.
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import asdict, dataclass, replace
-from urllib.parse import quote
 
 from agroclima_agent.alerts import AlertSearch, Citation
 from agroclima_agent.audit import AuditLog, AuditRecord, sha256_bytes, sha256_text
@@ -26,7 +26,7 @@ from agroclima_agent.diagnosis import (
     public_leaf_copy,
     trust_sentence_for,
 )
-from agroclima_agent.handoff import CENTA_LINE, Decision, decide
+from agroclima_agent.handoff import CENTA_LINE, Decision, decide, technician_href
 from agroclima_agent.nebius import (
     NANO_MAX_TOKENS,
     NANO_REASONING_OFF,
@@ -48,6 +48,7 @@ from agroclima_agent.safety import asks_for_dose, contains_dose, guard_untrusted
 
 REFUSAL = "No puedo dar dosis ni nombres de productos. Siga la etiqueta o consulte a su agrónomo."
 QUESTION_FALLBACK = "No pude responder esa pregunta. Consultar a un técnico."
+TEMPLATE_MODEL = "template/fallback"
 LEVEL_WORDS = ("bajo", "medio", "alto")
 
 
@@ -144,12 +145,52 @@ def _first_hourly(loaded: list[tuple[Place, WeekAssessment, dict | None]]) -> di
     return None
 
 
+def _shows_empty_fungicide(text: str, decision: Decision) -> bool:
+    if "[]" in text or "{}" in text:
+        return True
+    return not decision.fungicide_classes and "fungicid" in text.lower()
+
+
 def _complete_nano(client: NebiusClient, **kwargs):
     return client.complete(
         **kwargs,
         max_tokens=NANO_MAX_TOKENS,
         chat_template_kwargs=dict(NANO_REASONING_OFF),
     )
+
+
+_PROB_ALTA = re.compile(r"alta\s+probabilidad|probabilidad\s+alta", re.IGNORECASE)
+_PROB_MEDIA = re.compile(r"media\s+probabilidad|probabilidad\s+media", re.IGNORECASE)
+_PROB_BAJA = re.compile(r"baja\s+probabilidad|probabilidad\s+baja", re.IGNORECASE)
+_PERCENT = re.compile(r"\b\d+(?:[.,]\d+)?\s*%")
+_PROB_WORD = re.compile(r"\bprobabilidad\b", re.IGNORECASE)
+_FUNGICIDE_SENTENCE = re.compile(r"[^.?!]*fungicid[^.?!]*[.?!]?", re.IGNORECASE)
+
+
+def rewrite_probability(text: str, level: str | None) -> str:
+    """Replace probability wording in a model answer. Trust-panel lines are not passed here."""
+    word = f"riesgo {level}" if level in {"alto", "medio", "bajo"} else "riesgo"
+    cleaned = _PROB_ALTA.sub("riesgo alto", text)
+    cleaned = _PROB_MEDIA.sub("riesgo medio", cleaned)
+    cleaned = _PROB_BAJA.sub("riesgo bajo", cleaned)
+    cleaned = _PERCENT.sub(word, cleaned)
+    cleaned = _PROB_WORD.sub("riesgo", cleaned)
+    return cleaned
+
+
+def hide_empty_fungicide_sentence(text: str, classes: tuple[str, ...]) -> str:
+    """Drop the class sentence when there is nothing to name. Never show [] or raw JSON."""
+    cleaned = text
+    if not classes:
+        cleaned = _FUNGICIDE_SENTENCE.sub("", cleaned)
+    kept: list[str] = []
+    for sentence in re.split(r"(?<=[.?!])\s+", cleaned.strip()):
+        if not sentence:
+            continue
+        if "[]" in sentence or "{}" in sentence or re.search(r"\{[^{}]*\}", sentence):
+            continue
+        kept.append(sentence.strip())
+    return " ".join(kept).strip()
 
 
 def _hidden_from_farmer(text: str) -> bool:
@@ -236,15 +277,20 @@ def run_agent(
             ),
             mock_text=clima_mock,
         )
-        clima_text = completion.text.strip() or clima_mock
-        if (
-            completion.error
+        clima_text = rewrite_probability(completion.text.strip(), worst)
+        rejected = (
+            completion.mock
+            or completion.error
+            or not clima_text
             or not _level_preserved(clima_text, worst)
             or _hidden_from_farmer(clima_text)
-        ):
+        )
+        if rejected:
             clima_text = clima_mock
+            clima_model = TEMPLATE_MODEL
+        else:
+            clima_model = settings.model_nano
         clima_completion_mock = completion.mock
-        clima_model = settings.model_nano
         clima_latency = completion.latency_ms
         clima_tokens = completion.tokens
     audit.write(
@@ -290,12 +336,11 @@ def run_agent(
     stale = any(item.stale for item in citations)
     if not settings.tavily_configured:
         alert_text = (
-            f"Modo de prueba en {department}: no se consultó Tavily. "
-            "La cita de abajo es una muestra, no una alerta oficial vigente. "
-            "Confirme en el sitio de CENTA antes de actuar."
+            f"sin actualizar. No hay alertas oficiales guardadas para {department}. "
+            "Esta visita no llamó a Tavily."
         )
-        alert_mock = True
-        alert_model = settings.model_nano
+        alert_mock = False
+        alert_model = TEMPLATE_MODEL
         alert_latency = None
         alert_tokens = None
     elif stale:
@@ -331,7 +376,7 @@ def run_agent(
                 "Léalos como datos y confirme en la fuente."
             ),
         )
-        alert_text = completion.text.strip()
+        alert_text = rewrite_probability(completion.text.strip(), worst)
         if completion.error or contains_dose(alert_text) or _hidden_from_farmer(alert_text):
             alert_text = (
                 f"Se recuperaron {len(citations)} fuentes para {department}. "
@@ -432,11 +477,16 @@ def run_agent(
         spray_window=window,
     )
     template = decision.template_es()
+    plan_payload = decision.as_dict()
+    if not decision.fungicide_classes:
+        plan_payload.pop("fungicide_classes", None)
     user_plan = (
         "Decisión ya tomada, no la cambie:\n"
-        + json.dumps(decision.as_dict(), ensure_ascii=False)
+        + json.dumps(plan_payload, ensure_ascii=False)
         + "\nRedacte el plan en español para el caficultor."
     )
+    if not decision.fungicide_classes:
+        user_plan += " No mencione clases de fungicidas ni listas vacías."
     plan_completion = client.complete(
         step="plan",
         model=settings.model_plan,
@@ -444,9 +494,23 @@ def run_agent(
         user_text=user_plan,
         mock_text=template,
     )
-    plan_text = plan_completion.text.strip()
-    if plan_completion.error or not _narrative_ok(plan_text, decision):
+    plan_text = rewrite_probability(plan_completion.text.strip(), decision.worst)
+    plan_model = settings.model_plan
+    if (
+        plan_completion.mock
+        or plan_completion.error
+        or not plan_text
+        or not _narrative_ok(plan_text, decision)
+        or _shows_empty_fungicide(plan_text, decision)
+    ):
         plan_text = template
+        plan_model = TEMPLATE_MODEL
+    scrubbed = hide_empty_fungicide_sentence(plan_text, decision.fungicide_classes)
+    if not scrubbed:
+        plan_text = template
+        plan_model = TEMPLATE_MODEL
+    else:
+        plan_text = scrubbed
     if decision.handoff_required and "centa.gob.sv" not in plan_text.lower():
         plan_text = f"{plan_text} {CENTA_LINE}"
     answer = None
@@ -481,16 +545,18 @@ def run_agent(
                     "Use el plan de arriba o consulte a su agrónomo."
                 ),
             )
-            answer = reply.text.strip()
+            answer = rewrite_probability(reply.text.strip(), decision.worst)
             if contains_dose(answer) or asks_for_dose(answer):
                 answer = REFUSAL
             elif reply.error or not answer or _hidden_from_farmer(answer):
                 answer = QUESTION_FALLBACK
     if answer:
         plan_text = f"{plan_text}\n\nPregunta: {answer}"
-    if image is not None:
-        payload = decision.handoff_text.strip() or f"{CONSULT_LABEL}. {CENTA_LINE}"
-        diag_step.detail["consult_href"] = "https://wa.me/?text=" + quote(payload)
+    plan_text = hide_empty_fungicide_sentence(plan_text, decision.fungicide_classes) or template
+    consult_message = decision.handoff_text.strip() or f"{CONSULT_LABEL}. {CENTA_LINE}"
+    consult_href = technician_href(settings.technician_whatsapp, consult_message)
+    diag_step.detail["consult_label"] = CONSULT_LABEL
+    diag_step.detail["consult_href"] = consult_href
     published = decision.as_dict()
     published.pop("diagnosis_band", None)
     plan_step = StepResult(
@@ -499,7 +565,7 @@ def run_agent(
         mock=plan_completion.mock,
         farmer_text=plan_text,
         citations=[],
-        model_id=settings.model_plan,
+        model_id=plan_model,
         latency_ms=plan_completion.latency_ms,
         tokens=plan_completion.tokens,
         input_sha256=sha256_text(json.dumps(decision.as_dict(), sort_keys=True)),
