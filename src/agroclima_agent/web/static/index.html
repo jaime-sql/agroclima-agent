@@ -152,12 +152,12 @@
     <div id="results"></div>
     <section id="tecnico">
       <h2>Consultar a un técnico</h2>
-      <p>No technician number is configured on this page. Ask your cooperative, or read the public CENTA site.</p>
+      <p>Para una visita, comuníquese con el técnico de su cooperativa o de la oficina agrícola más cercana.</p>
       <p><a href="https://www.centa.gob.sv/">CENTA</a></p>
     </section>
     <footer>
-      Risk thresholds are our own estimate and have not been validated by ISC, CENTA, or MAG.
-      NVIDIA Nemotron-3.5-Super-VL reads the leaf on Nebius Token Factory when a key is set. If that call fails, a colour model answers. Neither line is a diagnosis.
+      Los umbrales de riesgo son una estimación propia y no están validados por el ISC, CENTA ni el MAG.
+      La lectura de la hoja es una orientación, no un diagnóstico.
     </footer>
   </main>
   <script>
@@ -205,7 +205,7 @@
           status.textContent = body.detail || "The request failed.";
           return;
         }
-        status.textContent = body.mock ? "Finished in mock mode." : "Finished with live services.";
+        status.textContent = body.status || "Listo.";
         render(body);
       } catch (error) {
         status.textContent = "Something went wrong. Try again.";

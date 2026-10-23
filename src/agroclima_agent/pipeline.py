@@ -50,6 +50,13 @@ REFUSAL = "No puedo dar dosis ni nombres de productos. Siga la etiqueta o consul
 QUESTION_FALLBACK = "No pude responder esa pregunta. Consultar a un técnico."
 TEMPLATE_MODEL = "template/fallback"
 LEVEL_WORDS = ("bajo", "medio", "alto")
+STATUS_LIVE = "Listo."
+STATUS_FALLBACK = "Listo. Algunas partes usaron respaldo."
+STATUS_MOCK = "Listo. Modo de prueba."
+_VENDOR_WORD = re.compile(
+    r"\b(?:Tavily|Nebius|NVIDIA|Nemotron|Open-Meteo|OpenAI|Token Factory)\b",
+    re.IGNORECASE,
+)
 
 
 @dataclass
@@ -87,11 +94,16 @@ class AgentResult:
     department: str
     steps: list[StepResult]
 
+    used_fallback: bool = False
+    status: str = STATUS_LIVE
+
     def as_dict(self) -> dict:
         return {
             "mock": self.mock,
             "mock_reasons": self.mock_reasons,
             "department": self.department,
+            "used_fallback": self.used_fallback,
+            "status": self.status,
             "steps": [step.as_dict() for step in self.steps],
         }
 
@@ -165,6 +177,40 @@ _PROB_BAJA = re.compile(r"baja\s+probabilidad|probabilidad\s+baja", re.IGNORECAS
 _PERCENT = re.compile(r"\b\d+(?:[.,]\d+)?\s*%")
 _PROB_WORD = re.compile(r"\bprobabilidad\b", re.IGNORECASE)
 _FUNGICIDE_SENTENCE = re.compile(r"[^.?!]*fungicid[^.?!]*[.?!]?", re.IGNORECASE)
+
+
+def strip_vendor_names(text: str) -> str:
+    """Farmer text names the advice, not the vendor. Audit and health keep those names."""
+    cleaned = _VENDOR_WORD.sub("", text)
+    cleaned = re.sub(r"[ \t]{2,}", " ", cleaned)
+    cleaned = re.sub(r"\s+([.,;:])", r"\1", cleaned)
+    return cleaned.strip()
+
+
+def status_line(*, mock: bool, used_fallback: bool) -> str:
+    """Spanish status for the page. Mock wins; otherwise say when a step used a backup."""
+    if mock:
+        return STATUS_MOCK
+    if used_fallback:
+        return STATUS_FALLBACK
+    return STATUS_LIVE
+
+
+def _step_used_fallback(step: StepResult) -> bool:
+    if step.model_id == TEMPLATE_MODEL:
+        return True
+    if step.detail.get("path") == PATH_COLOUR:
+        return True
+    return bool(step.detail.get("question_fallback"))
+
+
+def _for_farmer(step: StepResult) -> StepResult:
+    step.farmer_text = strip_vendor_names(step.farmer_text)
+    step.citations = [
+        replace(item, title=strip_vendor_names(item.title), snippet=strip_vendor_names(item.snippet))
+        for item in step.citations
+    ]
+    return step
 
 
 def rewrite_probability(text: str, level: str | None) -> str:
@@ -310,9 +356,12 @@ def run_agent(
         farmer_text=clima_text,
         citations=[
             Citation(
-                title="Pronóstico Open-Meteo",
+                title="Pronóstico horario",
                 url="https://open-meteo.com/",
-                snippet="Hourly temperature, humidity, and precipitation for the coffee municipalities in this department.",
+                snippet=(
+                    "Temperatura, humedad y lluvia por hora en los municipios "
+                    "cafetaleros de este departamento."
+                ),
                 official=False,
                 mock=False,
             )
@@ -336,8 +385,7 @@ def run_agent(
     stale = any(item.stale for item in citations)
     if not settings.tavily_configured:
         alert_text = (
-            f"sin actualizar. No hay alertas oficiales guardadas para {department}. "
-            "Esta visita no llamó a Tavily."
+            f"Alertas sin actualizar hoy. No hay alertas guardadas para {department}."
         )
         alert_mock = False
         alert_model = TEMPLATE_MODEL
@@ -345,8 +393,7 @@ def run_agent(
         alert_tokens = None
     elif stale:
         alert_text = (
-            f"sin actualizar. Las alertas de {department} salen de la caché compartida. "
-            "Esta visita no llamó a Tavily."
+            f"Alertas sin actualizar hoy. Las de {department} siguen guardadas de una visita anterior."
         )
         alert_mock = False
         alert_model = "tavily-cache"
@@ -559,6 +606,9 @@ def run_agent(
     diag_step.detail["consult_href"] = consult_href
     published = decision.as_dict()
     published.pop("diagnosis_band", None)
+    plan_detail = {"decision": published, "source": "deterministic-rules"}
+    if answer == QUESTION_FALLBACK:
+        plan_detail["question_fallback"] = True
     plan_step = StepResult(
         id="plan",
         title="Plan",
@@ -569,13 +619,17 @@ def run_agent(
         latency_ms=plan_completion.latency_ms,
         tokens=plan_completion.tokens,
         input_sha256=sha256_text(json.dumps(decision.as_dict(), sort_keys=True)),
-        detail={"decision": published, "source": "deterministic-rules"},
+        detail=plan_detail,
     )
+    steps = [_for_farmer(step) for step in (clima_step, alert_step, diag_step, plan_step)]
+    used_fallback = any(_step_used_fallback(step) for step in steps)
     return AgentResult(
         mock=settings.mock,
         mock_reasons=settings.mock_reasons(),
         department=department,
-        steps=[clima_step, alert_step, diag_step, plan_step],
+        steps=steps,
+        used_fallback=used_fallback,
+        status=status_line(mock=settings.mock, used_fallback=used_fallback),
     )
 
 

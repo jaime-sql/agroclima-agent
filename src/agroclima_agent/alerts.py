@@ -268,11 +268,10 @@ class AlertSearch:
 
 def _stale_notice(department: str) -> Citation:
     return Citation(
-        title="sin actualizar",
+        title="Alertas sin actualizar hoy",
         url="https://www.centa.gob.sv/",
         snippet=(
-            f"sin actualizar. No hay una alerta guardada para {department}. "
-            "Esta visita no llamó a Tavily."
+            f"Alertas sin actualizar hoy. No hay una alerta guardada para {department}."
         ),
         official=False,
         mock=False,

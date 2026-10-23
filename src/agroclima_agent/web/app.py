@@ -11,6 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from agroclima_agent.audit import AuditLog, tavily_usage
 from agroclima_agent.config import Settings, load_settings
 from agroclima_agent.diagnosis import CONSULT_LABEL
+from agroclima_agent.frozen_vision import load_frozen_vision
 from agroclima_agent.handoff import technician_href
 from agroclima_agent.open_meteo import ForecastSource, OpenMeteoSource
 from agroclima_agent.pipeline import run_agent
@@ -42,7 +43,7 @@ def create_app(settings: Settings | None = None, source: ForecastSource | None =
             "models": {
                 "nano": settings.model_nano,
                 "plan": settings.model_plan,
-                "vision": settings.model_vision,
+                "vision": load_frozen_vision()["model"],
             },
             "consult_label": CONSULT_LABEL,
             "consult_href": technician_href(
