@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AgroClima Agent</title>
+  <style>
+    :root {
+      --ink: #1c2416;
+      --muted: #5c684f;
+      --paper: #f6f1e6;
+      --card: #fffdf8;
+      --line: #e2d8c6;
+      --green: #1e5b2a;
+      --green-soft: #e5f2e4;
+      --amber: #6b4b00;
+      --amber-soft: #fff1c2;
+      --red: #8a1c14;
+      --red-soft: #fde2e1;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "Helvetica Neue", sans-serif;
+      color: var(--ink);
+      background: var(--paper);
+      line-height: 1.45;
+    }
+    header, main { max-width: 880px; margin: 0 auto; padding: 24px 20px; }
+    header { padding-bottom: 0; }
+    h1 { font-size: 1.8rem; margin: 0 0 4px; letter-spacing: -0.02em; }
+    .lede { color: var(--muted); margin: 0 0 12px; }
+    .flow {
+      font-weight: 650;
+      color: var(--green);
+      margin: 0 0 16px;
+    }
+    .banner {
+      background: var(--amber-soft);
+      color: var(--amber);
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin: 12px 0 18px;
+    }
+    form, article {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    label { display: block; font-weight: 650; margin-bottom: 6px; }
+    select, input[type="file"], textarea, button {
+      width: 100%;
+      font: inherit;
+    }
+    select, textarea {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px 12px;
+      background: white;
+      margin-bottom: 14px;
+    }
+    textarea { min-height: 72px; }
+    button {
+      background: var(--green);
+      color: white;
+      border: 0;
+      border-radius: 12px;
+      padding: 14px 16px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    button:disabled { opacity: 0.6; cursor: wait; }
+    .step { margin-bottom: 14px; }
+    .step h2 { margin: 0 0 6px; font-size: 1.15rem; }
+    .meta { color: var(--muted); font-size: 0.85rem; margin-bottom: 8px; }
+    .farmer {
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 1.12rem;
+      background: var(--green-soft);
+      border-radius: 12px;
+      padding: 12px 14px;
+      white-space: pre-wrap;
+    }
+    .badge {
+      display: inline-block;
+      font-family: "Segoe UI", sans-serif;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      border-radius: 999px;
+      padding: 2px 8px;
+      margin-left: 6px;
+      background: var(--amber-soft);
+      color: var(--amber);
+    }
+    ul { padding-left: 18px; }
+    a { color: var(--green); }
+    footer { color: var(--muted); font-size: 0.9rem; }
+    .days { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+    .day {
+      min-width: 72px;
+      border-radius: 10px;
+      padding: 8px;
+      background: #eee;
+      font-size: 0.85rem;
+    }
+    .day.alto { background: var(--red-soft); color: var(--red); }
+    .day.medio { background: var(--amber-soft); color: var(--amber); }
+    .day.bajo { background: var(--green-soft); color: var(--green); }
+    .error { color: var(--red); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>AgroClima Agent</h1>
+    <p class="lede">Coffee leaf rust guidance for El Salvador. The page chrome is English. Text for the farmer is Spanish.</p>
+    <p class="flow">Clima → Alertas oficiales → Diagnóstico → Plan</p>
+    <div id="banner" class="banner" hidden></div>
+  </header>
+  <main>
+    <form id="run-form">
+      <label for="department">Department</label>
+      <select id="department" name="department" required></select>
+      <label for="photo">Leaf photo (optional)</label>
+      <input id="photo" name="photo" type="file" accept="image/jpeg,image/png,image/webp" />
+      <label for="question">Question for the farmer’s summary (optional)</label>
+      <textarea id="question" name="question" maxlength="500" placeholder="Ask about the week. Dose and product questions are refused."></textarea>
+      <button type="submit" id="submit">Run agent</button>
+      <p id="status" class="meta" role="status"></p>
+    </form>
+    <div id="results"></div>
+    <footer>
+      Risk thresholds are our own estimate and have not been validated by ISC, CENTA, or MAG.
+      NVIDIA open models run on Nebius Token Factory when a key is set. The colour histogram is a baseline, not a diagnosis.
+    </footer>
+  </main>
+  <script>
+    const banner = document.querySelector("#banner");
+    const select = document.querySelector("#department");
+    const form = document.querySelector("#run-form");
+    const results = document.querySelector("#results");
+    const status = document.querySelector("#status");
+    const submit = document.querySelector("#submit");
+
+    function el(tag, className, text) {
+      const node = document.createElement(tag);
+      if (className) node.className = className;
+      if (text != null) node.textContent = text;
+      return node;
+    }
+
+    fetch("/api/health").then((response) => response.json()).then((health) => {
+      if (!health.mock) return;
+      banner.hidden = false;
+      banner.textContent = "Mock mode. " + (health.mock_reasons || []).join(". ") + ". Model and search replies below are labelled samples, not live output.";
+    });
+
+    fetch("/api/departments").then((response) => response.json()).then((body) => {
+      for (const name of body.departments) {
+        const option = el("option", "", name);
+        option.value = name;
+        if (name === "Santa Ana") option.selected = true;
+        select.appendChild(option);
+      }
+    });
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      submit.disabled = true;
+      status.textContent = "Running Clima, official alerts, diagnosis, and the plan…";
+      results.replaceChildren();
+      try {
+        const response = await fetch("/api/run", { method: "POST", body: new FormData(form) });
+        const body = await response.json();
+        if (!response.ok) {
+          status.textContent = body.detail || "The request failed.";
+          return;
+        }
+        status.textContent = body.mock ? "Finished in mock mode." : "Finished with live services.";
+        render(body);
+      } catch (error) {
+        status.textContent = "Something went wrong. Try again.";
+      } finally {
+        submit.disabled = false;
+      }
+    });
+
+    function render(body) {
+      for (const step of body.steps) {
+        const card = el("article", "step");
+        const title = el("h2", "", step.title);
+        if (step.mock) title.appendChild(el("span", "badge", "Mock"));
+        card.appendChild(title);
+        const bits = [];
+        if (step.model_id) bits.push(step.model_id);
+        if (step.latency_ms != null) bits.push(step.latency_ms + " ms");
+        if (step.tokens && step.tokens.total_tokens != null) bits.push(step.tokens.total_tokens + " tokens");
+        bits.push("input " + step.input_sha256.slice(0, 12));
+        card.appendChild(el("p", "meta", bits.join(" · ")));
+        card.appendChild(el("div", "farmer", step.farmer_text));
+        const days = step.detail && step.detail.days;
+        if (Array.isArray(days) && days.length) {
+          const row = el("div", "days");
+          for (const day of days) {
+            const chip = el("div", "day " + (day.level || ""), (day.level || "sin datos") + " " + day.date.slice(5));
+            row.appendChild(chip);
+          }
+          card.appendChild(row);
+        }
+        if (step.citations && step.citations.length) {
+          const list = el("ul");
+          for (const cite of step.citations) {
+            const item = el("li");
+            const link = el("a", "", cite.title);
+            link.href = cite.url;
+            link.rel = "noopener noreferrer";
+            link.target = "_blank";
+            item.appendChild(link);
+            const flag = cite.mock ? " (sample citation)" : cite.official ? " (official source)" : "";
+            item.appendChild(document.createTextNode(flag));
+            if (cite.snippet) item.appendChild(el("div", "meta", cite.snippet));
+            list.appendChild(item);
+          }
+          card.appendChild(list);
+        }
+        results.appendChild(card);
+      }
+    }
+  </script>
+</body>
+</html>
