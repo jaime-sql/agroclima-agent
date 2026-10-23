@@ -39,3 +39,5 @@ Files: raw_nemotron_val_v{1,2,3}.jsonl, raw_nemotron_test.jsonl, frozen_config.j
 ## Trust panel sentence (approved by Captain 2026-10-23)
 "Probado con 252 fotos públicas de hojas de café de Brasil (no de El Salvador): acertó roya o no roya en 89% (IC 95%: 85–93%), frente a 81% de un modelo simple de color. Orientativo — no es un diagnóstico."
 Confidence stays hidden (ECE 0.11 > 0.05).
+Fallback sentence (colour-histogram model answered):
+"Probado con 252 fotos públicas de hojas de café de Brasil (no de El Salvador): acertó roya o no roya en 81% (IC 95%: 76–86%). Orientativo — no es un diagnóstico."
