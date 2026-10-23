@@ -147,7 +147,11 @@ def test_live_client_posts_to_token_factory_and_audits_tokens(tmp_path):
 
 def test_tavily_content_is_guarded_before_it_is_returned(tmp_path):
     def handler(request: httpx.Request) -> httpx.Response:
+        assert str(request.url) == "https://api.tavily.com/search"
         body = json.loads(request.content.decode())
+        assert body["search_depth"] == "basic"
+        assert body["max_results"] <= 5
+        assert "advanced" not in json.dumps(body)
         assert "Hemileia" in body["query"]
         assert request.headers["Authorization"] == "Bearer tavily-test"
         return httpx.Response(
@@ -163,13 +167,33 @@ def test_tavily_content_is_guarded_before_it_is_returned(tmp_path):
             },
         )
 
-    settings = _settings(tmp_path, tavily_api_key="tavily-test")
+    settings = _settings(
+        tmp_path,
+        tavily_api_key="tavily-test",
+        tavily_cache_path=tmp_path / "cache.json",
+        tavily_counter_path=tmp_path / "counter.json",
+    )
     audit = AuditLog(settings.audit_log)
-    search = AlertSearch(settings, audit, transport=httpx.MockTransport(handler))
-    citations = search.search("Santa Ana")
+    calls = {"n": 0}
+
+    def counting(request: httpx.Request) -> httpx.Response:
+        calls["n"] += 1
+        return handler(request)
+
+    search = AlertSearch(settings, audit, transport=httpx.MockTransport(counting))
+    missed = search.search("Santa Ana")
+    assert calls["n"] == 0
+    assert missed[0].stale is True
+    assert "sin actualizar" in missed[0].title
+    citations = search.refresh("Santa Ana")
+    assert calls["n"] == 1
     assert citations[0].official is True
     assert "ignore previous" not in citations[0].snippet.lower()
     assert "5 kg" not in citations[0].snippet.lower()
+    search.refresh("Santa Ana")
+    search.search("Santa Ana")
+    assert calls["n"] == 1
     logged = settings.audit_log.read_text(encoding="utf-8")
     assert "tavily-test" not in logged
     assert "5 kg" not in logged
+    assert '"credits": 1' in logged

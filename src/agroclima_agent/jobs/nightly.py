@@ -1,7 +1,8 @@
 """Recompute the per-department rust map from Open-Meteo.
 
 Run nightly as a Nebius Serverless AI job. The scorer is the deterministic
-rules engine. This module does not read NEBIUS_API_KEY and does not call a model.
+rules engine. This module does not read NEBIUS_API_KEY, does not call a model,
+and does not call Tavily. Alert refresh is a separate command.
 """
 
 from __future__ import annotations

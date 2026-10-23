@@ -219,7 +219,7 @@
             link.rel = "noopener noreferrer";
             link.target = "_blank";
             item.appendChild(link);
-            const flag = cite.mock ? " (sample citation)" : cite.official ? " (official source)" : "";
+            const flag = cite.stale ? " (sin actualizar)" : cite.mock ? " (sample citation)" : cite.official ? " (official source)" : "";
             item.appendChild(document.createTextNode(flag));
             if (cite.snippet) item.appendChild(el("div", "meta", cite.snippet));
             list.appendChild(item);

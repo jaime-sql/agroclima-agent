@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 DEFAULT_BASE_URL = "https://api.tokenfactory.nebius.com/v1"
@@ -11,6 +11,8 @@ DEFAULT_NANO = "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B"
 DEFAULT_PLAN = "nvidia/nemotron-3-super-120b-a12b"
 DEFAULT_VISION = "nvidia/Nemotron-3.5-Super-VL"
 DEFAULT_OPEN_METEO = "https://api.open-meteo.com/v1/forecast"
+DEFAULT_TAVILY_DAILY_CAP = 40
+DEFAULT_TAVILY_TOTAL_CAP = 300
 
 
 def _blank(name: str) -> str | None:
@@ -19,6 +21,17 @@ def _blank(name: str) -> str | None:
         return None
     value = value.strip()
     return value or None
+
+
+def _positive_int(name: str, default: int) -> int:
+    raw = _blank(name)
+    if raw is None:
+        return default
+    try:
+        value = int(raw)
+    except ValueError:
+        return default
+    return value if value >= 0 else default
 
 
 @dataclass(frozen=True)
@@ -33,6 +46,10 @@ class Settings:
     host: str
     port: int
     open_meteo_base_url: str
+    tavily_daily_cap: int = DEFAULT_TAVILY_DAILY_CAP
+    tavily_total_cap: int = DEFAULT_TAVILY_TOTAL_CAP
+    tavily_cache_path: Path = field(default_factory=lambda: Path("var/tavily-cache.json"))
+    tavily_counter_path: Path = field(default_factory=lambda: Path("var/tavily-usage.json"))
 
     @property
     def nebius_configured(self) -> bool:
@@ -72,4 +89,8 @@ def load_settings() -> Settings:
         host=_blank("AGROCLIMA_HOST") or "127.0.0.1",
         port=port,
         open_meteo_base_url=(_blank("OPEN_METEO_BASE_URL") or DEFAULT_OPEN_METEO).rstrip("/"),
+        tavily_daily_cap=_positive_int("TAVILY_DAILY_CAP", DEFAULT_TAVILY_DAILY_CAP),
+        tavily_total_cap=_positive_int("TAVILY_TOTAL_CAP", DEFAULT_TAVILY_TOTAL_CAP),
+        tavily_cache_path=Path(_blank("AGROCLIMA_TAVILY_CACHE") or "var/tavily-cache.json"),
+        tavily_counter_path=Path(_blank("AGROCLIMA_TAVILY_COUNTER") or "var/tavily-usage.json"),
     )

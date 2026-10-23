@@ -50,6 +50,7 @@ def test_health_page_and_mock_run(tmp_path):
 
     departments = client.get("/api/departments").json()["departments"]
     assert "Santa Ana" in departments
+    assert client.get("/api/tavily-usage").json() == {"count": 0, "credits": 0}
 
     run = client.post("/api/run", data={"department": "Santa Ana", "question": ""})
     assert run.status_code == 200

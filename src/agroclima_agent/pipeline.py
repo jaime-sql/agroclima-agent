@@ -247,8 +247,9 @@ def run_agent(
     )
 
     citations = alerts.search(department)
-    official = [item for item in citations if item.official and not item.mock]
+    official = [item for item in citations if item.official and not item.mock and not item.stale]
     blocks = "\n\n".join(item.data_block() for item in citations) or "Sin resultados."
+    stale = any(item.stale for item in citations)
     if not settings.tavily_configured:
         alert_text = (
             f"Modo de prueba en {department}: no se consultó Tavily. "
@@ -257,6 +258,15 @@ def run_agent(
         )
         alert_mock = True
         alert_model = settings.model_nano
+        alert_latency = None
+        alert_tokens = None
+    elif stale:
+        alert_text = (
+            f"sin actualizar. Las alertas de {department} salen de la caché compartida. "
+            "Esta visita no llamó a Tavily."
+        )
+        alert_mock = False
+        alert_model = "tavily-cache"
         alert_latency = None
         alert_tokens = None
     elif not citations:
@@ -302,7 +312,7 @@ def run_agent(
         latency_ms=alert_latency,
         tokens=alert_tokens,
         input_sha256=sha256_text(blocks),
-        detail={"official_count": len(official), "retrieved": len(citations)},
+        detail={"official_count": len(official), "retrieved": len(citations), "stale": stale},
     )
 
     diagnosis: InterpretedDiagnosis | None = None

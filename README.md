@@ -52,7 +52,9 @@ The web form asks for a department, an optional leaf photo, and an optional ques
 | --- | --- | --- |
 | `NEBIUS_API_KEY` | Live models | Token Factory key. Empty → mock model steps |
 | `NEBIUS_BASE_URL` | No | Default `https://api.tokenfactory.nebius.com/v1` |
-| `TAVILY_API_KEY` | Live alerts | Tavily key. Empty → mock citation |
+| `TAVILY_API_KEY` | Live alert refresh | Tavily key. Empty → mock citation. Page loads never call Tavily |
+| `TAVILY_DAILY_CAP` | No | Default `40`. After this many basic searches in a local day, refresh stops |
+| `TAVILY_TOTAL_CAP` | No | Default `300` (dev/testing budget inside the 1,500 credit monthly account) |
 | `NEBIUS_MODEL_NANO` | No | Nano id above |
 | `NEBIUS_MODEL_PLAN` | No | Super id above, or Ultra |
 | `NEBIUS_MODEL_VISION` | No | Vision id above |
@@ -69,8 +71,10 @@ flowchart LR
   UI[Web UI] --> Pipe[Pipeline]
   Pipe --> Clima[Clima rules]
   Clima --> Meteo[Open-Meteo]
-  Pipe --> Tavily[Tavily alerts]
-  Tavily --> Guard[Injection guard]
+  Pipe --> Cache[Shared alert cache]
+  Refresh[Refresh once per department per 24h] --> Tavily[Tavily basic search]
+  Tavily --> Cache
+  Cache --> Guard[Injection guard]
   Guard --> Nano[Nemotron Nano]
   Pipe --> Vision[NVIDIA vision model]
   Pipe --> Hist[Colour-histogram baseline]
@@ -86,7 +90,26 @@ flowchart LR
   Pipe --> Audit[Audit log]
 ```
 
-Clima scores each coffee municipality in the chosen department and keeps the worst level. Alertas queries Tavily for official rust notices (CENTA, MAG, ISC, OIRSA, IICA, FAO) and treats the text as data. Diagnóstico sends the photo to the vision model. The histogram runs beside it and is scored by `agroclima-eval`; it never authorizes a product. Plan fills class name, dose note, spray window, and handoff from the rules, then asks Super or Ultra to say that decision in Spanish. A numeric dose in the model text is discarded.
+Clima scores each coffee municipality in the chosen department and keeps the worst level. Alertas reads a shared cache of official rust notices (CENTA, MAG, ISC, OIRSA, IICA, FAO) and treats that text as data. Diagnóstico sends the photo to the vision model. The histogram runs beside it and is scored by `agroclima-eval`; it never authorizes a product. Plan fills class name, dose note, spray window, and handoff from the rules, then asks Super or Ultra to say that decision in Spanish. A numeric dose in the model text is discarded.
+
+## Tavily budget
+
+The hackathon account has 1,500 credits per month. This app keeps a smaller dev/testing ceiling so a loop cannot spend the month in one day.
+
+| Control | Value |
+| --- | --- |
+| Call type | `search_depth=basic` only, 1 credit. `max_results` is 5 |
+| Not used | advanced search, extract, crawl, map |
+| Who may call | `agroclima-alerts`, at most once per department every 24 hours |
+| Who never calls | a page load, `/api/run`, and the nightly risk job |
+| `TAVILY_DAILY_CAP` | 40 searches on the El Salvador calendar day |
+| `TAVILY_TOTAL_CAP` | 300 searches, persisted across days |
+
+A repeat visit reads `var/tavily-cache.json` and costs 0 credits. When a cap is already reached, refresh keeps the last saved alerts and the page labels them **sin actualizar**. It does not call Tavily. `GET /api/tavily-usage` reads the audit log and returns `{ "count", "credits" }` for those basic searches. Every real call is one audit line with `step` `tavily-search` and `credits` 1.
+
+```bash
+agroclima-alerts
+```
 
 ## Nightly job
 
@@ -96,7 +119,7 @@ Clima scores each coffee municipality in the chosen department and keeps the wor
 docker build -t agroclima-agent .
 ```
 
-The public create example has no cron field. Schedule the job in the Serverless AI console every day at 06:00 America/El_Salvador (12:00 UTC). The entrypoint is safe to run again. `agroclima-nightly --fixture` writes a map without calling Open-Meteo, which is what CI runs through pytest.
+The public create example has no cron field. Schedule the job in the Serverless AI console every day at 06:00 America/El_Salvador (12:00 UTC). The entrypoint is safe to run again. `agroclima-nightly --fixture` writes a map without calling Open-Meteo, which is what CI runs through pytest. That job does not call Tavily. Alert refresh is `agroclima-alerts`, on its own schedule.
 
 The web UI, if you want it in the same image:
 

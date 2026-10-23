@@ -18,7 +18,7 @@ Baseline: [jaime-sql/agroclima](https://github.com/jaime-sql/agroclima) at `3964
 | Runtime | Next.js on a Cloudflare Worker | Python app. One command: `./run` |
 | Models | OpenAI `gpt-4.1-mini` for the leaf; Blaxel then OpenAI for questions | Nebius Token Factory, OpenAI-compatible. Nemotron Nano summarizes. Nemotron Super (or Ultra via env) words the plan. NVIDIA vision reads the leaf |
 | Vision check | Single model call | `LeafDiagnoser` interface. `agroclima-eval` compares that model with a colour-histogram baseline on synthetic leaves |
-| Official alerts | Not searched | Tavily search, citations in the UI, prompt-injection guard (search text is data) |
+| Official alerts | Not searched | Shared Tavily cache: basic search only, at most once per department per 24 hours, not on a page load and not in the nightly job. Caps default to 40/day and 300 total. Stale rows are labelled sin actualizar |
 | Risk map | Computed when a place is opened | Nightly Nebius Serverless AI job writes a per-department map. The job does not call a model |
 | Who decides the level and the handoff | Rules for the level; the ask model could still talk about the plan | Rules decide the level, the plan fields, and whether a technician is needed. The model only narrates that decision, and a dose in the narration is dropped |
 | Safety log | Ask-path headers and log lines | JSONL audit per step: hashed inputs, model id, latency, tokens when the API returns them. PII is redacted before the call |

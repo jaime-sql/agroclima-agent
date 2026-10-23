@@ -8,7 +8,7 @@ from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from agroclima_agent.audit import AuditLog
+from agroclima_agent.audit import AuditLog, tavily_usage
 from agroclima_agent.config import Settings, load_settings
 from agroclima_agent.open_meteo import ForecastSource, OpenMeteoSource
 from agroclima_agent.pipeline import run_agent
@@ -47,6 +47,10 @@ def create_app(settings: Settings | None = None, source: ForecastSource | None =
     @app.get("/api/departments")
     def list_departments() -> dict:
         return {"departments": departments()}
+
+    @app.get("/api/tavily-usage")
+    def tavily_usage_view() -> dict:
+        return tavily_usage(settings.audit_log)
 
     @app.post("/api/run")
     async def run(

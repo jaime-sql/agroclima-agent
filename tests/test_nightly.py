@@ -1,5 +1,7 @@
+import inspect
 import json
 
+from agroclima_agent.jobs import nightly
 from agroclima_agent.jobs.nightly import build_map, main
 from agroclima_agent.open_meteo import FixtureSource
 from agroclima_agent.places import load_places
@@ -31,3 +33,7 @@ def test_fixture_map_covers_each_coffee_department(tmp_path, monkeypatch):
     main()
     written = json.loads(destination.read_text(encoding="utf-8"))
     assert len(written["departments"]) == 7
+    source = inspect.getsource(nightly)
+    assert "api.tavily.com" not in source
+    assert "AlertSearch" not in source
+    assert "refresh_alerts" not in source

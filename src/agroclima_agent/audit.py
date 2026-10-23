@@ -25,6 +25,7 @@ class AuditRecord:
     latency_ms: float
     tokens: dict | None
     mock: bool
+    credits: int | None = None
 
     def as_dict(self) -> dict:
         return {
@@ -35,7 +36,31 @@ class AuditRecord:
             "latency_ms": round(self.latency_ms, 3),
             "tokens": self.tokens,
             "mock": self.mock,
+            "credits": self.credits,
         }
+
+
+def tavily_usage(path: Path) -> dict:
+    """Count real Tavily searches recorded in the audit log, and sum their credits."""
+    count = 0
+    credits = 0
+    if path.exists():
+        for line in path.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                row = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if row.get("step") != "tavily-search":
+                continue
+            cost = row.get("credits")
+            if not isinstance(cost, int):
+                continue
+            count += 1
+            credits += cost
+    return {"count": count, "credits": credits}
 
 
 class AuditLog:
