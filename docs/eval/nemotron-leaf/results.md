@@ -37,7 +37,7 @@ Smoke and reasoning-toggle probes ≈ $0.002; val 3×253 = $0.1113; sealed test 
 Files: raw_nemotron_val_v{1,2,3}.jsonl, raw_nemotron_test.jsonl, frozen_config.json, FROZEN.md, run.py, valscore.py, score_nebius.py, scores_nebius.md.
 
 ## Trust panel sentence (approved by Captain 2026-10-23)
-"Probado con 252 fotos públicas de hojas de café de Brasil (no de El Salvador): acertó roya o no roya en 89% (IC 95%: 85–93%), frente a 81% de un modelo simple de color. Orientativo — no es un diagnóstico."
+"Probado con 252 fotos públicas de hojas de café de Brasil (no de El Salvador), fotografiadas sobre fondo blanco, no en el campo: acertó roya o no roya en 89% (IC 95%: 85–93%), frente a 81% de un modelo simple de color. Detecta 78% de las hojas con roya: se le escapa cerca de 1 de cada 5. Orientativo — no es un diagnóstico."
 Confidence stays hidden (ECE 0.11 > 0.05).
 Fallback sentence (colour-histogram model answered):
-"Probado con 252 fotos públicas de hojas de café de Brasil (no de El Salvador): acertó roya o no roya en 81% (IC 95%: 76–86%). Orientativo — no es un diagnóstico."
+"Probado con 252 fotos públicas de hojas de café de Brasil (no de El Salvador), fotografiadas sobre fondo blanco, no en el campo: acertó roya o no roya en 81% (IC 95%: 76–86%). Detecta 79% de las hojas con roya: se le escapa cerca de 1 de cada 5. Orientativo — no es un diagnóstico."
