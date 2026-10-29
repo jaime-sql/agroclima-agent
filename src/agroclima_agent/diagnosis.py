@@ -7,7 +7,12 @@ from dataclasses import dataclass
 
 from agroclima_agent.frozen_vision import load_frozen_vision, vision_call
 from agroclima_agent.nebius import NebiusClient
-from agroclima_agent.trust_sentences import COLOUR_TRUST_SENTENCE, NEMOTRON_TRUST_SENTENCE
+from agroclima_agent.trust_sentences import (
+    COLOUR_TRUST_SENTENCE,
+    COLOUR_TRUST_SENTENCE_EN,
+    NEMOTRON_TRUST_SENTENCE,
+    NEMOTRON_TRUST_SENTENCE_EN,
+)
 
 LABELS = ("roya", "sana", "otro", "retomar")
 RETAKE_REASONS = ("borrosa", "no_hoja", "lejos", "otra")
@@ -168,14 +173,32 @@ def parse_model_payload(raw: str, model_id: str) -> LeafRead:
     return read
 
 
-def trust_sentence_for(path: str) -> str:
+def trust_sentence_for(path: str, language: str = "es") -> str:
+    if language == "en":
+        if path == PATH_VISION:
+            return NEMOTRON_TRUST_SENTENCE_EN
+        return COLOUR_TRUST_SENTENCE_EN
     if path == PATH_VISION:
         return NEMOTRON_TRUST_SENTENCE
     return COLOUR_TRUST_SENTENCE
 
 
-def public_leaf_copy(read: LeafRead) -> str:
+def consult_label(language: str = "es") -> str:
+    if language == "en":
+        return "Consult a technician"
+    return CONSULT_LABEL
+
+
+def orientation_tag(language: str = "es") -> str:
+    if language == "en":
+        return "Guidance only — not a diagnosis"
+    return ORIENTATION_TAG
+
+
+def public_leaf_copy(read: LeafRead, language: str = "es") -> str:
     """Farmer-facing leaf result. No confidence word and no percent."""
+    if language == "en":
+        return _public_leaf_copy_en(read)
     if read.label == "retomar":
         reason = read.retake_reason if read.retake_reason in RETAKE_COPY else "otra"
         detail, advice = RETAKE_COPY[reason]
@@ -188,6 +211,41 @@ def public_leaf_copy(read: LeafRead) -> str:
         return f"Parece roya. {ORIENTATION}"
     detail, advice = RETAKE_COPY["otra"]
     return f"Repetir foto. {detail} {advice}"
+
+
+_RETAKE_EN = {
+    "borrosa": (
+        "The photo is blurry.",
+        "Hold the phone still with both hands. Tap the leaf on the screen to focus.",
+    ),
+    "no_hoja": (
+        "We do not see a coffee leaf.",
+        "Put one coffee leaf in the center, on your hand or a sheet of paper.",
+    ),
+    "lejos": (
+        "The leaf is too far away.",
+        "Move to about a hand’s span from the leaf so it fills the screen.",
+    ),
+    "otra": (
+        "We could not check this photo.",
+        "Take it in daylight, with good light and no direct sun. One leaf, up close.",
+    ),
+}
+
+
+def _public_leaf_copy_en(read: LeafRead) -> str:
+    if read.label == "retomar":
+        reason = read.retake_reason if read.retake_reason in _RETAKE_EN else "otra"
+        detail, advice = _RETAKE_EN[reason]
+        return f"Take the photo again. {detail} {advice}"
+    if read.label == "sana":
+        return "It looks healthy. We do not see rust on this leaf. Check other plants every week."
+    if read.label == "otro":
+        return "It does not look like rust, but something is on the leaf. This app only checks rust."
+    if read.label == "roya":
+        return "It looks like rust. This is guidance, not a diagnosis. Confirm with an agronomist."
+    detail, advice = _RETAKE_EN["otra"]
+    return f"Take the photo again. {detail} {advice}"
 
 
 def interpret(read: LeafRead) -> InterpretedDiagnosis:

@@ -152,7 +152,9 @@ def test_missing_tavily_key_does_not_mock_the_app(tmp_path):
     assert result.mock is False
     alerts = result.steps[1]
     assert alerts.mock is False
-    assert "sin actualizar" in alerts.farmer_text
+    assert alerts.farmer_text == "No encontramos una alerta oficial para Santa Ana."
+    assert "guardadas" not in alerts.farmer_text
+    assert "visita anterior" not in alerts.farmer_text
     assert alerts.citations[0].stale is True
     assert "nvidia/" not in (alerts.model_id or "")
 

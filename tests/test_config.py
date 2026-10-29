@@ -114,6 +114,7 @@ def test_env_example_lists_secrets_without_values():
         "NEBIUS_MODEL_NANO=",
         "TAVILY_DAILY_CAP=40",
         "TAVILY_TOTAL_CAP=300",
+        "AGROCLIMA_DAILY_RUN_CAP=300",
     ):
         assert name in text
     assert "sk-" not in text

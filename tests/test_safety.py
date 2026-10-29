@@ -26,8 +26,22 @@ def test_injection_and_dose_are_filtered_in_search_text():
     assert "UNTRUSTED SEARCH DATA" in block
     assert "<system>" not in block
     assert asks_for_dose("¿Cuál es la dosis en kg?")
+    assert asks_for_dose("¿Qué marca uso?")
+    assert asks_for_dose("¿Cuántos gramos aplico?")
+    assert not asks_for_dose(
+        "¿Cuándo conviene aplicar el fungicida de cobre esta semana si llueve por la tarde?"
+    )
     assert contains_dose("Use 2.8 kg por manzana")
     assert not contains_dose("dosis según etiqueta / su agrónomo")
+
+
+def test_centa_switchboard_is_not_redacted():
+    text = "CENTA (503) 2397-2200 y el móvil 7890-1234."
+    cleaned = redact_pii(text)
+    assert "2397-2200" in cleaned
+    assert "(503) 2397-2200" in cleaned
+    assert "7890-1234" not in cleaned
+    assert "[phone]" in cleaned
 
 
 def test_official_hosts():

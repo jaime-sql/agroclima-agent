@@ -11,6 +11,8 @@ _EMAIL = re.compile(r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b", re.IGNORECASE)
 _DUI = re.compile(r"\b\d{8}-\d\b")
 _E164 = re.compile(r"\+\d{8,15}\b")
 _SV_PHONE = re.compile(r"(?<!\d)(?:\+?503[\s.-]?)?\d{4}[\s.-]\d{4}(?!\d)")
+# Public CENTA switchboard. It is not farmer PII and must survive redaction.
+_CENTA_PHONE = re.compile(r"(?<!\d)(?:\+?503[\s.-]*)?2397[\s.-]*2200(?!\d)")
 _COORDS = re.compile(r"-?\d{1,3}\.\d{4,}")
 _CARD = re.compile(r"\b(?:\d[ -]?){13,19}\b")
 _DOSE = re.compile(
@@ -29,20 +31,31 @@ _INJECTION = [
     re.compile(r"(?i)do not tell the (user|farmer)"),
 ]
 
+# Timing questions about a named fungicide are allowed. Refuse doses, amounts, and brands.
 _DOSE_ASK = re.compile(
-    r"(?i)\b(dosis|fungicida|mezcl\w*|marca|nombre del producto|c[oó]mo (aplico|fumigo|mezclo)|"
-    r"cu[aá]ntos?\s+(kg|cc|ml|gramos|litros))\b"
+    r"(?i)(\bdosis\b|\bmarca\b|nombre del producto|\bbrand\b|"
+    r"cu[aá]nt[oa]s?\s+(?:kg|g|gr|gramos|cc|ml|litros)\b|"
+    r"\d+(?:[.,]\d+)?\s*(?:kg|g|gramos|cc|ml|litros)\b)"
 )
 
 
 def redact_pii(text: str) -> str:
     """Replace contact details, IDs, precise coordinates, and card-like numbers."""
-    cleaned = _EMAIL.sub("[email]", text)
+    held: list[str] = []
+
+    def _hold(match: re.Match[str]) -> str:
+        held.append(match.group(0))
+        return f"__CENTA_{len(held) - 1}__"
+
+    shielded = _CENTA_PHONE.sub(_hold, text)
+    cleaned = _EMAIL.sub("[email]", shielded)
     cleaned = _DUI.sub("[dui]", cleaned)
     cleaned = _E164.sub("[phone]", cleaned)
     cleaned = _SV_PHONE.sub("[phone]", cleaned)
     cleaned = _COORDS.sub("[coords]", cleaned)
     cleaned = _CARD.sub("[number]", cleaned)
+    for index, original in enumerate(held):
+        cleaned = cleaned.replace(f"__CENTA_{index}__", original)
     return cleaned
 
 

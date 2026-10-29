@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>AgroClima Agent</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath fill='%231e5b2a' d='M16 3c1.2 6 6.5 8.2 10 12-5 1.6-8 6.4-10 14C14.2 21.4 9 16.6 6 15 9.2 11.2 14.6 9 16 3z'/%3E%3C/svg%3E" />
   <style>
     :root {
       --ink: #1c2416;
@@ -28,13 +29,21 @@
     }
     header, main { max-width: 880px; margin: 0 auto; padding: 24px 20px; }
     header { padding-bottom: 0; }
+    .top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
     h1 { font-size: 1.8rem; margin: 0 0 4px; letter-spacing: -0.02em; }
     .lede { color: var(--muted); margin: 0 0 12px; }
-    .flow {
-      font-weight: 650;
+    .flow { font-weight: 650; color: var(--green); margin: 0 0 16px; }
+    .lang { display: flex; gap: 6px; }
+    .lang button {
+      width: auto;
+      background: white;
       color: var(--green);
-      margin: 0 0 16px;
+      border: 1px solid var(--green);
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-weight: 700;
     }
+    .lang button[aria-pressed="true"] { background: var(--green); color: white; }
     .banner {
       background: var(--amber-soft);
       color: var(--amber);
@@ -50,10 +59,7 @@
       margin-bottom: 16px;
     }
     label { display: block; font-weight: 650; margin-bottom: 6px; }
-    select, input[type="file"], textarea, button {
-      width: 100%;
-      font: inherit;
-    }
+    select, textarea, button { width: 100%; font: inherit; }
     select, textarea {
       border: 1px solid var(--line);
       border-radius: 10px;
@@ -72,6 +78,19 @@
       cursor: pointer;
     }
     button:disabled { opacity: 0.6; cursor: wait; }
+    .file-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+    .file-row button { width: auto; padding: 10px 14px; }
+    .file-name { color: var(--muted); }
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      border: 0;
+    }
     .step { margin-bottom: 14px; }
     .step h2 { margin: 0 0 6px; font-size: 1.15rem; }
     .meta { color: var(--muted); font-size: 0.85rem; margin-bottom: 8px; }
@@ -100,22 +119,11 @@
     a { color: var(--green); }
     footer { color: var(--muted); font-size: 0.9rem; }
     .days { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
-    .day {
-      min-width: 72px;
-      border-radius: 10px;
-      padding: 8px;
-      background: #eee;
-      font-size: 0.85rem;
-    }
+    .day { min-width: 72px; border-radius: 10px; padding: 8px; background: #eee; font-size: 0.85rem; }
     .day.alto { background: var(--red-soft); color: var(--red); }
     .day.medio { background: var(--amber-soft); color: var(--amber); }
     .day.bajo { background: var(--green-soft); color: var(--green); }
-    .error { color: var(--red); }
-    .trust, .orientation {
-      color: #6e6a64;
-      font-size: 0.95rem;
-      margin: 10px 0 0;
-    }
+    .trust, .orientation { color: #6e6a64; font-size: 0.95rem; margin: 10px 0 0; }
     a.consult {
       display: inline-block;
       width: auto;
@@ -132,41 +140,135 @@
 </head>
 <body>
   <header>
-    <h1>AgroClima Agent</h1>
-    <p class="lede">Coffee leaf rust guidance for El Salvador. The page chrome is English. Text for the farmer is Spanish.</p>
-    <p class="flow">Clima → Alertas oficiales → Diagnóstico → Plan</p>
-    <p><a id="consult-tecnico" class="consult" href="#tecnico">Consultar a un técnico</a></p>
+    <div class="top">
+      <h1>AgroClima Agent</h1>
+      <div class="lang" role="group" aria-label="Language">
+        <button type="button" id="lang-es" aria-pressed="true">ES</button>
+        <button type="button" id="lang-en" aria-pressed="false">EN</button>
+      </div>
+    </div>
+    <p id="tagline" class="lede"></p>
+    <p id="flow" class="flow"></p>
+    <p><a id="consult-tecnico" class="consult" href="#tecnico"></a></p>
     <div id="banner" class="banner" hidden></div>
   </header>
   <main>
     <form id="run-form">
-      <label for="department">Department</label>
+      <input type="hidden" name="language" id="language" value="es" />
+      <label id="department-label" for="department"></label>
       <select id="department" name="department" required></select>
-      <label for="photo">Leaf photo (optional)</label>
-      <input id="photo" name="photo" type="file" accept="image/jpeg,image/png,image/webp" />
-      <label for="question">Question for the farmer’s summary (optional)</label>
-      <textarea id="question" name="question" maxlength="500" placeholder="Ask about the week. Dose and product questions are refused."></textarea>
-      <button type="submit" id="submit">Run agent</button>
+      <label id="photo-label" for="photo-button"></label>
+      <div class="file-row">
+        <button type="button" id="photo-button"></button>
+        <span id="photo-name" class="file-name"></span>
+        <input id="photo" class="visually-hidden" name="photo" type="file" accept="image/jpeg,image/png,image/webp" />
+      </div>
+      <label id="question-label" for="question"></label>
+      <textarea id="question" name="question" maxlength="500"></textarea>
+      <button type="submit" id="submit"></button>
       <p id="status" class="meta" role="status"></p>
     </form>
     <div id="results"></div>
     <section id="tecnico">
-      <h2>Consultar a un técnico</h2>
-      <p>Para una visita, comuníquese con el técnico de su cooperativa o de la oficina agrícola más cercana.</p>
+      <h2 id="tecnico-title"></h2>
+      <p id="tecnico-body"></p>
       <p><a href="https://www.centa.gob.sv/">CENTA</a></p>
     </section>
-    <footer>
-      Los umbrales de riesgo son una estimación propia y no están validados por el ISC, CENTA ni el MAG.
-      La lectura de la hoja es una orientación, no un diagnóstico.
-    </footer>
+    <footer id="disclaimer"></footer>
   </main>
   <script>
+    const STR = {
+      es: {
+        tagline: "Orientación sobre la roya del cafeto para un pequeño caficultor en El Salvador.",
+        flow: "Clima → Alertas oficiales → Diagnóstico → Plan",
+        consult: "Consultar a un técnico",
+        consultBody: "Para una visita, comuníquese con el técnico de su cooperativa o de la oficina agrícola más cercana.",
+        disclaimer: "Los umbrales de riesgo son una estimación propia y no están validados por el ISC, CENTA ni el MAG. La lectura de la hoja es una orientación, no un diagnóstico.",
+        department: "Departamento",
+        photo: "Foto de hoja (opcional)",
+        photoButton: "Elegir foto",
+        photoEmpty: "Ningún archivo elegido",
+        question: "Pregunta (opcional)",
+        placeholder: "Pregunte por la semana. No respondemos dosis ni productos.",
+        submit: "Ejecutar agente",
+        running: "Consultando el clima, las alertas oficiales, el diagnóstico y el plan…",
+        failed: "No se pudo completar la consulta.",
+        error: "Algo salió mal. Intente de nuevo.",
+        mock: "Modo de prueba. Las respuestas del modelo son ejemplos, no una consulta en vivo.",
+        badge: "Prueba",
+        sample: " (ejemplo)",
+        official: " (fuente oficial)",
+        stale: " (sin actualizar)",
+        input: "entrada",
+        nodata: "sin datos",
+        steps: { clima: "Clima", alertas: "Alertas oficiales", diagnostico: "Diagnóstico", plan: "Plan" }
+      },
+      en: {
+        tagline: "Coffee leaf rust guidance for a small farmer in El Salvador.",
+        flow: "Weather → Official alerts → Diagnosis → Plan",
+        consult: "Consult a technician",
+        consultBody: "For a visit, contact the technician at your cooperative or the nearest farm office.",
+        disclaimer: "The risk thresholds are our own estimate and are not validated by ISC, CENTA, or MAG. The leaf reading is guidance, not a diagnosis.",
+        department: "Department",
+        photo: "Leaf photo (optional)",
+        photoButton: "Choose photo",
+        photoEmpty: "No file selected",
+        question: "Question (optional)",
+        placeholder: "Ask about the week. Dose and product questions are refused.",
+        submit: "Run agent",
+        running: "Checking the weather, official alerts, the diagnosis, and the plan…",
+        failed: "The request could not be completed.",
+        error: "Something went wrong. Try again.",
+        mock: "Practice mode. Model replies below are samples, not a live consultation.",
+        badge: "Sample",
+        sample: " (sample citation)",
+        official: " (official source)",
+        stale: " (not updated)",
+        input: "input",
+        nodata: "no data",
+        steps: { clima: "Weather", alertas: "Official alerts", diagnostico: "Diagnosis", plan: "Plan" }
+      }
+    };
+
     const banner = document.querySelector("#banner");
     const select = document.querySelector("#department");
     const form = document.querySelector("#run-form");
     const results = document.querySelector("#results");
     const status = document.querySelector("#status");
     const submit = document.querySelector("#submit");
+    const photo = document.querySelector("#photo");
+    const photoButton = document.querySelector("#photo-button");
+    const photoName = document.querySelector("#photo-name");
+    const languageInput = document.querySelector("#language");
+    let lang = localStorage.getItem("agroclima-lang") === "en" ? "en" : "es";
+    let health = null;
+    let lastBody = null;
+
+    function textOf(id) { return STR[lang][id]; }
+
+    function applyLanguage(next) {
+      lang = next === "en" ? "en" : "es";
+      localStorage.setItem("agroclima-lang", lang);
+      document.documentElement.lang = lang;
+      languageInput.value = lang;
+      document.querySelector("#lang-es").setAttribute("aria-pressed", lang === "es" ? "true" : "false");
+      document.querySelector("#lang-en").setAttribute("aria-pressed", lang === "en" ? "true" : "false");
+      document.querySelector("#tagline").textContent = textOf("tagline");
+      document.querySelector("#flow").textContent = textOf("flow");
+      document.querySelector("#consult-tecnico").textContent = textOf("consult");
+      document.querySelector("#tecnico-title").textContent = textOf("consult");
+      document.querySelector("#tecnico-body").textContent = textOf("consultBody");
+      document.querySelector("#disclaimer").textContent = textOf("disclaimer");
+      document.querySelector("#department-label").textContent = textOf("department");
+      document.querySelector("#photo-label").textContent = textOf("photo");
+      photoButton.textContent = textOf("photoButton");
+      if (!photo.files || !photo.files.length) photoName.textContent = textOf("photoEmpty");
+      document.querySelector("#question-label").textContent = textOf("question");
+      document.querySelector("#question").placeholder = textOf("placeholder");
+      submit.textContent = textOf("submit");
+      if (health && health.mock) banner.textContent = textOf("mock");
+      if (lastBody) render(lastBody);
+    }
 
     function el(tag, className, text) {
       const node = document.createElement(tag);
@@ -175,13 +277,24 @@
       return node;
     }
 
-    const consult = document.querySelector("#consult-tecnico");
-    fetch("/api/health").then((response) => response.json()).then((health) => {
+    function visibleModel(id) {
+      return id && id.indexOf("nvidia/") === 0 ? id : "";
+    }
+
+    photoButton.addEventListener("click", () => photo.click());
+    photo.addEventListener("change", () => {
+      photoName.textContent = photo.files && photo.files.length ? photo.files[0].name : textOf("photoEmpty");
+    });
+    document.querySelector("#lang-es").addEventListener("click", () => applyLanguage("es"));
+    document.querySelector("#lang-en").addEventListener("click", () => applyLanguage("en"));
+
+    fetch("/api/health").then((response) => response.json()).then((body) => {
+      health = body;
+      const consult = document.querySelector("#consult-tecnico");
       if (health.consult_href && consult) consult.href = health.consult_href;
-      if (health.consult_label && consult) consult.textContent = health.consult_label;
       if (!health.mock) return;
       banner.hidden = false;
-      banner.textContent = "Mock mode. " + (health.mock_reasons || []).join(". ") + ". Model and search replies below are labelled samples, not live output.";
+      banner.textContent = textOf("mock");
     });
 
     fetch("/api/departments").then((response) => response.json()).then((body) => {
@@ -196,35 +309,41 @@
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
       submit.disabled = true;
-      status.textContent = "Running Clima, official alerts, diagnosis, and the plan…";
+      status.textContent = textOf("running");
       results.replaceChildren();
+      lastBody = null;
       try {
         const response = await fetch("/api/run", { method: "POST", body: new FormData(form) });
         const body = await response.json();
         if (!response.ok) {
-          status.textContent = body.detail || "The request failed.";
+          const detail = body && body.detail;
+          status.textContent = typeof detail === "string" ? detail : textOf("failed");
           return;
         }
-        status.textContent = body.status || "Listo.";
+        lastBody = body;
+        status.textContent = body.status || textOf("submit");
         render(body);
       } catch (error) {
-        status.textContent = "Something went wrong. Try again.";
+        status.textContent = textOf("error");
       } finally {
         submit.disabled = false;
       }
     });
 
     function render(body) {
+      results.replaceChildren();
+      const copy = STR[lang];
       for (const step of body.steps) {
         const card = el("article", "step");
-        const title = el("h2", "", step.title);
-        if (step.mock) title.appendChild(el("span", "badge", "Mock"));
+        const title = el("h2", "", copy.steps[step.id] || step.title);
+        if (step.mock) title.appendChild(el("span", "badge", copy.badge));
         card.appendChild(title);
         const bits = [];
-        if (step.model_id) bits.push(step.model_id);
+        const model = visibleModel(step.model_id);
+        if (model) bits.push(model);
         if (step.latency_ms != null) bits.push(step.latency_ms + " ms");
         if (step.tokens && step.tokens.total_tokens != null) bits.push(step.tokens.total_tokens + " tokens");
-        bits.push("input " + step.input_sha256.slice(0, 12));
+        bits.push(copy.input + " " + step.input_sha256.slice(0, 12));
         card.appendChild(el("p", "meta", bits.join(" · ")));
         card.appendChild(el("div", "farmer", step.farmer_text));
         const detail = step.detail || {};
@@ -237,11 +356,12 @@
           consult.rel = "noopener noreferrer";
           card.appendChild(consult);
         }
-        const days = step.detail && step.detail.days;
+        const days = detail.days;
         if (Array.isArray(days) && days.length) {
           const row = el("div", "days");
           for (const day of days) {
-            const chip = el("div", "day " + (day.level || ""), (day.level || "sin datos") + " " + day.date.slice(5));
+            const level = day.level || "";
+            const chip = el("div", "day " + level, (level || copy.nodata) + " " + day.date.slice(5));
             row.appendChild(chip);
           }
           card.appendChild(row);
@@ -255,7 +375,7 @@
             link.rel = "noopener noreferrer";
             link.target = "_blank";
             item.appendChild(link);
-            const flag = cite.stale ? " (sin actualizar)" : cite.mock ? " (sample citation)" : cite.official ? " (official source)" : "";
+            const flag = cite.stale ? copy.stale : cite.mock ? copy.sample : cite.official ? copy.official : "";
             item.appendChild(document.createTextNode(flag));
             if (cite.snippet) item.appendChild(el("div", "meta", cite.snippet));
             list.appendChild(item);
@@ -265,6 +385,8 @@
         results.appendChild(card);
       }
     }
+
+    applyLanguage(lang);
   </script>
 </body>
 </html>

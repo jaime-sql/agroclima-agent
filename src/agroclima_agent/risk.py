@@ -7,7 +7,8 @@ must not change these cutoffs or the level of a day.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
+from zoneinfo import ZoneInfo
 
 REASON_ALTO = "«Hojas mojadas muchas horas y clima tibio: la roya se pega fácil.»"
 REASON_MEDIO = "«Humedad o lluvia algunas horas: riesgo moderado.»"
@@ -132,19 +133,73 @@ def _next_stamp(stamp: str) -> str | None:
     return f"{nxt.isoformat()}T{hour:02d}:00"
 
 
-def next_dry_spray_window(hourly: dict | None) -> SprayWindow | None:
+DAYLIGHT_START = 6
+DAYLIGHT_END = 17
+_WEEKDAYS_ES = ("lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo")
+
+
+def _parse_local(stamp: str) -> datetime | None:
+    if len(stamp) < 16 or stamp[10] != "T":
+        return None
+    try:
+        return datetime.fromisoformat(stamp[:16])
+    except ValueError:
+        return None
+
+
+def _clock_label(moment: datetime, language: str) -> tuple[str, str]:
+    suffix = "a. m." if moment.hour < 12 else "p. m."
+    if language == "en":
+        suffix = "a.m." if moment.hour < 12 else "p.m."
+    hour = moment.hour % 12 or 12
+    return f"{hour}:{moment.minute:02d}", suffix
+
+
+def format_spray_window(window: SprayWindow, language: str = "es") -> str:
+    """Local wording such as 'jueves 30, 7:00–10:00 a. m.' Never a raw ISO stamp."""
+    start = _parse_local(window.start)
+    end = _parse_local(window.end)
+    if start is None or end is None:
+        return ""
+    left, left_suffix = _clock_label(start, language)
+    right, right_suffix = _clock_label(end, language)
+    if left_suffix == right_suffix:
+        span = f"{left}–{right} {left_suffix}"
+    else:
+        span = f"{left} {left_suffix}–{right} {right_suffix}"
+    if language == "en":
+        weekday = start.strftime("%A")
+    else:
+        weekday = _WEEKDAYS_ES[start.weekday()]
+    return f"{weekday} {start.day}, {span}"
+
+
+def next_dry_spray_window(
+    hourly: dict | None,
+    now: datetime | None = None,
+) -> SprayWindow | None:
+    """First 4 future dry hours inside 06:00–17:59 America/El_Salvador."""
     if not hourly:
         return None
+    if now is None:
+        now = datetime.now(ZoneInfo(TIMEZONE))
+    if now.tzinfo is not None:
+        now = now.astimezone(ZoneInfo(TIMEZONE)).replace(tzinfo=None)
     rows = _hour_rows(hourly)
     for start in range(0, len(rows) - 3):
         ok = True
         for offset in range(4):
-            if not _is_dry_spray(rows[start + offset]):
+            row = rows[start + offset]
+            stamp = _parse_local(str(row["time"]))
+            if stamp is None or stamp <= now or not DAYLIGHT_START <= stamp.hour <= DAYLIGHT_END:
+                ok = False
+                break
+            if not _is_dry_spray(row):
                 ok = False
                 break
             if offset > 0:
                 expected = _next_stamp(rows[start + offset - 1]["time"])
-                actual = rows[start + offset]["time"][:16]
+                actual = str(row["time"])[:16]
                 if expected is None or actual != expected:
                     ok = False
                     break

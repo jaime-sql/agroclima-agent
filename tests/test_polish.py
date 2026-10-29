@@ -116,7 +116,8 @@ def test_fallback_status_names_the_backup(tmp_path):
     assert result.mock is False
     assert result.used_fallback is True
     assert result.status == STATUS_FALLBACK
-    assert result.steps[1].farmer_text.startswith("Alertas sin actualizar hoy")
+    assert result.steps[1].farmer_text == "No encontramos una alerta oficial para Santa Ana."
+    assert "guardadas" not in result.steps[1].farmer_text
     assert result.steps[2].detail["path"] == "colour-lr"
     shown = _farmer_bits(result)
     for name in VENDORS:
