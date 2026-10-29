@@ -176,6 +176,22 @@ def _shows_empty_fungicide(text: str, decision: Decision) -> bool:
     return not decision.fungicide_classes and "fungicid" in text.lower()
 
 
+PLAN_TIMEOUT_SECONDS = 20.0
+PLAN_RETRY_STEP = "plan-retry"
+
+
+def _complete_plan(client: NebiusClient, **kwargs):
+    """Plan call with one retry on a live error. Worst case is two short timeouts (~40 s).
+
+    The retry is a separate audit record with step "plan-retry".
+    """
+    first = client.complete(**kwargs, timeout=PLAN_TIMEOUT_SECONDS)
+    if first.mock or not first.error:
+        return first
+    retry_kwargs = dict(kwargs, step=PLAN_RETRY_STEP)
+    return client.complete(**retry_kwargs, timeout=PLAN_TIMEOUT_SECONDS)
+
+
 def _complete_nano(client: NebiusClient, **kwargs):
     return client.complete(
         **kwargs,
@@ -710,7 +726,8 @@ def run_agent(
         if not decision.fungicide_classes:
             user_plan += " No mencione clases de fungicidas ni listas vacías."
         plan_system = PLAN_SYSTEM
-    plan_completion = client.complete(
+    plan_completion = _complete_plan(
+        client,
         step="plan",
         model=settings.model_plan,
         system=plan_system,
