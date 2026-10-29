@@ -1,1 +1,1 @@
-"""Small English UI over the Spanish farmer-facing agent."""
+"""Spanish page over the farmer-facing agent."""

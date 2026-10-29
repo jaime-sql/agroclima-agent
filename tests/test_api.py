@@ -47,7 +47,17 @@ def test_health_page_and_mock_run(tmp_path):
     page = client.get("/")
     assert page.status_code == 200
     assert "Clima → Alertas oficiales → Diagnóstico → Plan" in page.text
-    assert "Mock mode" in page.text
+    assert "The page chrome is English. Text for the farmer is Spanish." not in page.text
+    assert 'lang="es"' in page.text
+    assert "Departamento" in page.text
+    assert "Department" in page.text
+    assert "Foto de hoja (opcional)" in page.text
+    assert "Leaf photo (optional)" in page.text
+    assert "Ejecutar agente" in page.text
+    assert "Run agent" in page.text
+    assert "Consult a technician" in page.text
+    assert "localStorage" in page.text
+    assert 'rel="icon"' in page.text
     assert "trust_sentence" in page.text
     assert "orientation_tag" in page.text
     assert "consult_href" in page.text
@@ -55,6 +65,10 @@ def test_health_page_and_mock_run(tmp_path):
     departments = client.get("/api/departments").json()["departments"]
     assert "Santa Ana" in departments
     assert client.get("/api/tavily-usage").json() == {"count": 0, "credits": 0}
+    icon = client.get("/favicon.ico")
+    assert icon.status_code == 200
+    assert "svg" in icon.headers["content-type"]
+    assert "#1e5b2a" in icon.text
 
     run = client.post("/api/run", data={"department": "Santa Ana", "question": ""})
     assert run.status_code == 200

@@ -36,6 +36,7 @@ MAX_RESULTS = 5
 QUERY = "alerta oficial roya del cafeto Hemileia vastatrix El Salvador CENTA MAG"
 CACHE_TTL = timedelta(hours=24)
 SV = ZoneInfo("America/El_Salvador")
+EMPTY_ALERT_TITLE = "Sin alerta oficial"
 
 
 @dataclass(frozen=True)
@@ -95,7 +96,7 @@ class AlertSearch:
         """Serve the shared cache. This method never calls Tavily."""
         started = time.perf_counter()
         if not self.settings.tavily_configured:
-            citations = [_stale_notice(department)]
+            citations = [_empty_notice(department)]
             mock = False
             model_id = "template/fallback"
         else:
@@ -111,7 +112,7 @@ class AlertSearch:
         A page load must not call this. The nightly risk job must not call this.
         """
         if not self.settings.tavily_configured:
-            return [_stale_notice(department)]
+            return [_empty_notice(department)]
         entry = self._entry(department)
         if entry is not None and self._is_fresh(entry):
             return _citations_from(entry, stale=False)
@@ -139,12 +140,12 @@ class AlertSearch:
     def _cached(self, department: str) -> list[Citation]:
         entry = self._entry(department)
         if entry is None:
-            return [_stale_notice(department)]
+            return [_empty_notice(department)]
         return _citations_from(entry, stale=not self._is_fresh(entry))
 
     def _mark_stale(self, department: str, entry: dict | None) -> list[Citation]:
         if entry is None:
-            return [_stale_notice(department)]
+            return [_empty_notice(department)]
         return _citations_from(entry, stale=True)
 
     def _basic_search(self, department: str) -> tuple[list[Citation], str | None]:
@@ -266,13 +267,23 @@ class AlertSearch:
         )
 
 
-def _stale_notice(department: str) -> Citation:
+def empty_alert_line(department: str, language: str = "es") -> str:
+    """One honest sentence when this department has no saved official alert."""
+    if language == "en":
+        return f"No official alert was found for {department}."
+    return f"No encontramos una alerta oficial para {department}."
+
+
+def is_placeholder_alert(citation: Citation) -> bool:
+    return citation.title == EMPTY_ALERT_TITLE
+
+
+def _empty_notice(department: str) -> Citation:
+    line = empty_alert_line(department)
     return Citation(
-        title="Alertas sin actualizar hoy",
+        title=EMPTY_ALERT_TITLE,
         url="https://www.centa.gob.sv/",
-        snippet=(
-            f"Alertas sin actualizar hoy. No hay una alerta guardada para {department}."
-        ),
+        snippet=line,
         official=False,
         mock=False,
         stale=True,
@@ -282,7 +293,7 @@ def _stale_notice(department: str) -> Citation:
 def _citations_from(entry: dict, *, stale: bool) -> list[Citation]:
     raw_items = entry.get("citations")
     if not isinstance(raw_items, list) or not raw_items:
-        return [_stale_notice(str(entry.get("query") or ""))]
+        return [_empty_notice(str(entry.get("query") or ""))]
     citations: list[Citation] = []
     for item in raw_items:
         if not isinstance(item, dict):
@@ -300,7 +311,7 @@ def _citations_from(entry: dict, *, stale: bool) -> list[Citation]:
                 stale=stale,
             )
         )
-    return citations or [_stale_notice("")]
+    return citations or [_empty_notice("")]
 
 
 def _read_json(path) -> dict:

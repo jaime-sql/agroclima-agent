@@ -13,6 +13,7 @@ DEFAULT_VISION = "nvidia/Nemotron-3.5-Super-VL"
 DEFAULT_OPEN_METEO = "https://api.open-meteo.com/v1/forecast"
 DEFAULT_TAVILY_DAILY_CAP = 40
 DEFAULT_TAVILY_TOTAL_CAP = 300
+DEFAULT_DAILY_RUN_CAP = 300
 
 
 def _blank(name: str) -> str | None:
@@ -91,6 +92,7 @@ class Settings:
     tavily_cache_path: Path = field(default_factory=lambda: Path("var/tavily-cache.json"))
     tavily_counter_path: Path = field(default_factory=lambda: Path("var/tavily-usage.json"))
     technician_whatsapp: str | None = None
+    daily_run_cap: int = DEFAULT_DAILY_RUN_CAP
 
     @property
     def nebius_configured(self) -> bool:
@@ -128,4 +130,5 @@ def load_settings() -> Settings:
         tavily_cache_path=_var_path("AGROCLIMA_TAVILY_CACHE", "var/tavily-cache.json"),
         tavily_counter_path=_var_path("AGROCLIMA_TAVILY_COUNTER", "var/tavily-usage.json"),
         technician_whatsapp=_blank("TECHNICIAN_WHATSAPP"),
+        daily_run_cap=_positive_int("AGROCLIMA_DAILY_RUN_CAP", DEFAULT_DAILY_RUN_CAP),
     )

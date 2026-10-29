@@ -177,19 +177,47 @@ def test_temperature_edges_and_spray_window():
     assert one(25.1, 20).warm_wet_hours == 1
 
     hours = []
-    for hour in range(6):
+    for hour in range(24):
+        dry_night = hour < 6
         hours.append(
             {
                 "time": f"2026-10-10T{hour:02d}:00",
                 "temperature_2m": 24,
-                "relative_humidity_2m": 70,
-                "precipitation": 0,
-                "precipitation_probability": 10,
+                "relative_humidity_2m": 70 if dry_night else 95,
+                "precipitation": 0 if dry_night else 1,
+                "precipitation_probability": 10 if dry_night else 90,
             }
         )
-    window = next_dry_spray_window(_forecast([{"date": "2026-10-10", "hours": hours}])["hourly"])
+    from datetime import datetime
+
+    from agroclima_agent.risk import format_spray_window
+
+    night = next_dry_spray_window(
+        _forecast([{"date": "2026-10-10", "hours": hours}])["hourly"],
+        now=datetime(2026, 10, 10, 0, 0),
+    )
+    assert night is None
+    daylight = []
+    for hour in range(24):
+        dry = 8 <= hour <= 11
+        daylight.append(
+            {
+                "time": f"2026-10-30T{hour:02d}:00",
+                "temperature_2m": 24,
+                "relative_humidity_2m": 70 if dry else 95,
+                "precipitation": 0 if dry else 1,
+                "precipitation_probability": 10 if dry else 90,
+            }
+        )
+    window = next_dry_spray_window(
+        _forecast([{"date": "2026-10-30", "hours": daylight}])["hourly"],
+        now=datetime(2026, 10, 30, 6, 0),
+    )
     assert window is not None
-    assert window.start.startswith("2026-10-10T00")
+    assert window.start.startswith("2026-10-30T08")
+    label = format_spray_window(window)
+    assert label == "viernes 30, 8:00–11:00 a. m."
+    assert "T08" not in label
 
 
 def test_synthetic_week_is_alto():

@@ -66,7 +66,9 @@ def test_mock_run_keeps_rules_ahead_of_the_plan_model(tmp_path):
     assert result.mock is True
     assert result.steps[1].mock is False
     assert result.steps[1].citations[0].stale is True
-    assert "sin actualizar" in result.steps[1].citations[0].title
+    assert result.steps[1].citations[0].title == "Sin alerta oficial"
+    assert "guardadas" not in result.steps[1].farmer_text
+    assert "visita anterior" not in result.steps[1].farmer_text
     assert result.steps[1].model_id == "template/fallback"
     plan_calls = [call for call in client.calls if call["step"] == "plan"]
     assert plan_calls
@@ -107,6 +109,73 @@ def test_dose_question_never_calls_the_model(tmp_path):
     assert all(call["step"] != "pregunta" for call in client.calls)
     assert "No puedo dar dosis" in result.steps[3].farmer_text
     assert any(record["model_id"] == "deterministic-refusal" for record in audit.records)
+
+
+def test_timing_question_still_calls_the_model(tmp_path):
+    settings = _settings(tmp_path)
+    audit = AuditLog(settings.audit_log)
+    client = RecordingClient(settings)
+    question = "¿Cuándo conviene aplicar el fungicida de cobre esta semana si llueve por la tarde?"
+    result = run_agent(
+        settings=settings,
+        department="Santa Ana",
+        places=places_in("Santa Ana"),
+        source=FixtureSource(synthetic_forecast()),
+        image=None,
+        media_type=None,
+        question=question,
+        audit=audit,
+        client=client,
+        alerts=AlertSearch(settings, audit),
+    )
+    assert any(call["step"] == "pregunta" for call in client.calls)
+    assert "No puedo dar dosis" not in result.steps[3].farmer_text
+
+
+def test_plan_keeps_the_centa_number_and_drops_internal_words(tmp_path):
+    settings = _settings(tmp_path, nebius_api_key="test-key-not-real")
+    audit = AuditLog(settings.audit_log)
+
+    class Echo(RecordingClient):
+        def complete(self, **kwargs):
+            self.calls.append(kwargs)
+            text = kwargs["mock_text"]
+            if kwargs["step"] == "plan":
+                text = (
+                    "Sí, debe fumigar. handoff (503) [phone] a las 2026-10-30T19:00. "
+                    "Repita la dosis."
+                )
+            return Completion(
+                text=text,
+                model=kwargs["model"],
+                mock=kwargs["step"] != "plan",
+                tokens=None,
+                latency_ms=1,
+            )
+
+    client = Echo(settings)
+    result = run_agent(
+        settings=settings,
+        department="Santa Ana",
+        places=places_in("Santa Ana"),
+        source=FixtureSource(synthetic_forecast()),
+        image=None,
+        media_type=None,
+        question=None,
+        audit=audit,
+        client=client,
+        alerts=AlertSearch(settings, audit),
+    )
+    plan = result.steps[3].farmer_text
+    assert "2397-2200" in plan
+    assert "[phone]" not in plan
+    assert "handoff" not in plan.lower()
+    assert "debe fumigar" not in plan.lower()
+    assert "repita la dosis" not in plan.lower()
+    assert "T19" not in plan
+    assert "no hay ventana adecuada" in plan.lower()
+    sent = next(call["user_text"] for call in client.calls if call["step"] == "plan")
+    assert "2397-2200" not in sent
 
 
 def test_live_client_posts_to_token_factory_and_audits_tokens(tmp_path):
@@ -185,7 +254,8 @@ def test_tavily_content_is_guarded_before_it_is_returned(tmp_path):
     missed = search.search("Santa Ana")
     assert calls["n"] == 0
     assert missed[0].stale is True
-    assert "sin actualizar" in missed[0].title
+    assert missed[0].title == "Sin alerta oficial"
+    assert "guardadas" not in missed[0].snippet
     citations = search.refresh("Santa Ana")
     assert calls["n"] == 1
     assert citations[0].official is True

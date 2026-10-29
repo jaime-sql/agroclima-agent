@@ -13,6 +13,7 @@ from agroclima_agent.risk import (
     SprayWindow,
     WeekAssessment,
     display_reason,
+    format_spray_window,
     worst_level,
 )
 
@@ -51,9 +52,9 @@ class Decision:
             )
         dose = f"Cuánto: {self.dose_note}."
         when = (
-            f"Cuándo: próxima ventana seca {self.spray_window}."
+            f"Cuándo: {self.spray_window}."
             if self.spray_window
-            else "Cuándo: no hay una ventana seca clara en este pronóstico."
+            else f"Cuándo: {NO_WINDOW_ES}."
         )
         parts = [
             f"Departamento: {self.department}. Peor nivel de la semana: {level}.",
@@ -64,6 +65,38 @@ class Decision:
         ]
         if self.handoff_text:
             parts.append(self.handoff_text)
+        parts.append(self.footer)
+        return " ".join(parts)
+
+    def template_for(self, language: str) -> str:
+        if language != "en":
+            return self.template_es()
+        level = {"bajo": "low", "medio": "medium", "alto": "high"}.get(self.worst or "", "no data")
+        if not self.plan_allowed:
+            action = "What: watch the farm and do not spray a product based only on this screen."
+        elif self.worst == "bajo":
+            action = "What: keep checking leaves. The weather in this department looks less favorable for rust."
+        else:
+            classes = ", ".join(self.fungicide_classes)
+            action = (
+                f"What: if your agronomist says so, use a product from one of these classes: {classes}. "
+                "Cover the underside of the leaf and rotate the mode of action."
+            )
+        dose = f"How much: {self.dose_note}."
+        when = (
+            f"When: {self.spray_window}."
+            if self.spray_window
+            else f"When: {NO_WINDOW_EN}."
+        )
+        parts = [
+            f"Department: {self.department}. Worst level this week: {level}.",
+            self.reason,
+            action,
+            dose,
+            when,
+        ]
+        if self.handoff_required:
+            parts.append("Consult a technician.")
         parts.append(self.footer)
         return " ".join(parts)
 
@@ -104,10 +137,14 @@ def technician_href(number: str | None, message: str) -> str:
     return f"https://wa.me/{digits}?text={quote(message)}"
 
 
-def _window_text(window: SprayWindow | None) -> str | None:
+NO_WINDOW_ES = "no hay ventana adecuada en los próximos días"
+NO_WINDOW_EN = "there is no suitable window in the coming days"
+
+
+def _window_text(window: SprayWindow | None, language: str = "es") -> str | None:
     if window is None:
         return None
-    return f"{window.start} a {window.end}"
+    return format_spray_window(window, language)
 
 
 def decide(
@@ -118,6 +155,7 @@ def decide(
     photo_supplied: bool,
     vision_mock: bool,
     spray_window: SprayWindow | None,
+    language: str = "es",
 ) -> Decision:
     worst = worst_level([day.level for day in week.days]) if week.available else None
     top = _worst_day(week.days) if week.available else None
@@ -175,7 +213,7 @@ def decide(
         handoff_text=" ".join(dict.fromkeys(notes)),
         fungicide_classes=FUNGICIDE_CLASSES if plan_allowed and week.available else (),
         dose_note=DOSE_NOTE,
-        spray_window=_window_text(spray_window) if plan_allowed else None,
+        spray_window=_window_text(spray_window, language) if plan_allowed else None,
         footer=RISK_FOOTER,
         diagnosis_band=band,
         diagnosis_label=label,

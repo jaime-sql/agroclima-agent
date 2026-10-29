@@ -1,6 +1,27 @@
 # AgroClima Agent
 
+Public demo: https://port8080-mvk3d4wrrkt7g6k.tunnel.applications.us-north1.nebius.cloud
+
 AgroClima Agent helps a small coffee farmer in El Salvador see the week’s coffee-rust risk, current official alerts, a leaf check, and a short plan. Risk levels and technician handoff are fixed rules. NVIDIA open models on Nebius Token Factory only summarize, read the leaf, and word the plan that the rules already decided.
+
+## How to test
+
+The demo is hosted on a Nebius AI endpoint in us-north1. Model calls go to Nebius Token Factory and use NVIDIA Nemotron. The page is Spanish by default, with an ES/EN toggle.
+
+Open the UI and choose Santa Ana. Ask a coffee question such as “¿Cómo está el riesgo de roya esta semana?”
+
+```bash
+curl -sS https://port8080-mvk3d4wrrkt7g6k.tunnel.applications.us-north1.nebius.cloud/api/health
+```
+
+```bash
+curl -sS -X POST https://port8080-mvk3d4wrrkt7g6k.tunnel.applications.us-north1.nebius.cloud/api/run \
+  -F "department=Santa Ana" \
+  -F "question=¿Cómo está el riesgo de roya esta semana?" \
+  -F "language=es"
+```
+
+`/api/run` allows about 10 requests per 10 minutes from one address, and `AGROCLIMA_DAILY_RUN_CAP` model runs per El Salvador day (default 300). `/api/health` and the page stay available after either limit.
 
 This is the Nebius Global AI Hackathon entry for the Best Apps and Agents track, with the Tavily bonus. Submission deadline: Friday 30 October 2026, 11:00 America/El_Salvador. It is a new version of [jaime-sql/agroclima](https://github.com/jaime-sql/agroclima). What changed is written in [docs/changes-from-agroclima.md](docs/changes-from-agroclima.md).
 
@@ -64,6 +85,7 @@ The web form asks for a department, an optional leaf photo, and an optional ques
 | `AGROCLIMA_AUDIT_LOG` | No | JSONL audit path, default `var/audit.jsonl`. On Vercel this default is `/tmp/audit.jsonl` |
 | `AGROCLIMA_HOST` / `AGROCLIMA_PORT` | No | Default `127.0.0.1:8000`. Cloud Run injects `PORT`, and that value wins. An unset host listens on `0.0.0.0` when `PORT` is set |
 | `OPEN_METEO_BASE_URL` | No | Forecast endpoint |
+| `AGROCLIMA_DAILY_RUN_CAP` | No | Default `300`. After this many `/api/run` model calls on the El Salvador day, the demo stops calling the model |
 
 Only `.env.example` is committed. `.env` is gitignored. The audit log stores a SHA-256 of the redacted input, the model id, latency, and token counts when the API returns them. It does not store the keys, the photo, or the raw question.
 
