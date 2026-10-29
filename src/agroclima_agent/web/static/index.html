@@ -28,22 +28,41 @@
       line-height: 1.45;
     }
     header, main { max-width: 880px; margin: 0 auto; padding: 24px 20px; }
-    header { padding-bottom: 0; }
-    .top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+    header {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: start;
+      gap: 12px;
+      padding-bottom: 0;
+    }
     h1 { font-size: 1.8rem; margin: 0 0 4px; letter-spacing: -0.02em; }
     .lede { color: var(--muted); margin: 0 0 12px; }
-    .flow { font-weight: 650; color: var(--green); margin: 0 0 16px; }
-    .lang { display: flex; gap: 6px; }
+    .flow { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 16px; }
+    .flow span {
+      background: var(--green-soft);
+      color: var(--green);
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-weight: 650;
+    }
+    .lang {
+      display: flex;
+      border: 1px solid var(--green);
+      border-radius: 999px;
+      overflow: hidden;
+      background: white;
+    }
     .lang button {
       width: auto;
-      background: white;
+      background: transparent;
       color: var(--green);
-      border: 1px solid var(--green);
+      border: 0;
       border-radius: 999px;
       padding: 6px 12px;
       font-weight: 700;
     }
     .lang button[aria-pressed="true"] { background: var(--green); color: white; }
+    #banner { grid-column: 1 / -1; }
     .banner {
       background: var(--amber-soft);
       color: var(--amber);
@@ -78,9 +97,15 @@
       cursor: pointer;
     }
     button:disabled { opacity: 0.6; cursor: wait; }
-    .file-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
-    .file-row button { width: auto; padding: 10px 14px; }
-    .file-name { color: var(--muted); }
+    .file-row { margin-bottom: 14px; }
+    #photo-button {
+      min-height: 44px;
+      width: 100%;
+      background: white;
+      color: var(--green);
+      border: 1px dashed var(--green);
+    }
+    .file-name { color: var(--muted); display: block; margin-top: 6px; }
     .visually-hidden {
       position: absolute;
       width: 1px;
@@ -93,15 +118,28 @@
     }
     .step { margin-bottom: 14px; }
     .step h2 { margin: 0 0 6px; font-size: 1.15rem; }
-    .meta { color: var(--muted); font-size: 0.85rem; margin-bottom: 8px; }
+    .meta { color: var(--muted); font-size: 0.8rem; margin: 8px 0 0; }
+    details.tech summary { font-size: 0.8rem; color: var(--muted); cursor: pointer; }
     .farmer {
-      font-family: Georgia, "Times New Roman", serif;
-      font-size: 1.12rem;
+      font-family: inherit;
+      font-size: 1.05rem;
+      line-height: 1.55;
       background: var(--green-soft);
       border-radius: 12px;
       padding: 12px 14px;
       white-space: pre-wrap;
     }
+    .level {
+      display: inline-block;
+      font-weight: 800;
+      font-size: 1rem;
+      padding: 4px 12px;
+      border-radius: 999px;
+      margin: 0 0 8px;
+    }
+    .level.alto { background: var(--red-soft); color: var(--red); }
+    .level.medio { background: var(--amber-soft); color: var(--amber); }
+    .level.bajo { background: var(--green-soft); color: var(--green); }
     .badge {
       display: inline-block;
       font-family: "Segoe UI", sans-serif;
@@ -117,15 +155,27 @@
     }
     ul { padding-left: 18px; }
     a { color: var(--green); }
-    footer { color: var(--muted); font-size: 0.9rem; }
+    footer { color: var(--muted); font-size: 0.85rem; margin-top: 24px; }
     .days { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
     .day { min-width: 72px; border-radius: 10px; padding: 8px; background: #eee; font-size: 0.85rem; }
     .day.alto { background: var(--red-soft); color: var(--red); }
     .day.medio { background: var(--amber-soft); color: var(--amber); }
     .day.bajo { background: var(--green-soft); color: var(--green); }
-    .trust, .orientation { color: #6e6a64; font-size: 0.95rem; margin: 10px 0 0; }
-    a.consult {
+    .day.sin-datos { background: #eee; color: #5c684f; }
+    .trust { color: #6e6a64; font-size: 0.95rem; margin: 10px 0 0; }
+    .orientation {
       display: inline-block;
+      background: #efece6;
+      color: #5c684f;
+      border-radius: 999px;
+      padding: 4px 12px;
+      font-size: 0.85rem;
+      margin: 10px 0 0;
+    }
+    a.consult {
+      display: inline-flex;
+      align-items: center;
+      min-height: 44px;
       width: auto;
       margin-top: 12px;
       background: white;
@@ -136,20 +186,26 @@
       font-weight: 700;
       text-decoration: none;
     }
+    @media (max-width: 480px) {
+      header, main { padding: 16px 14px; }
+      h1 { font-size: 1.45rem; }
+      form, article { padding: 14px; border-radius: 14px; }
+      .days { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); }
+      .day { min-width: 0; text-align: center; }
+    }
   </style>
 </head>
 <body>
   <header>
-    <div class="top">
+    <div>
       <h1>AgroClima Agent</h1>
-      <div class="lang" role="group" aria-label="Language">
-        <button type="button" id="lang-es" aria-pressed="true">ES</button>
-        <button type="button" id="lang-en" aria-pressed="false">EN</button>
-      </div>
+      <p id="tagline" class="lede">Guía de roya del café para productores de El Salvador.</p>
+      <div id="flow" class="flow"></div>
     </div>
-    <p id="tagline" class="lede"></p>
-    <p id="flow" class="flow"></p>
-    <p><a id="consult-tecnico" class="consult" href="#tecnico"></a></p>
+    <div class="lang" role="group" aria-label="Language">
+      <button type="button" id="lang-es" aria-pressed="true">ES</button>
+      <button type="button" id="lang-en" aria-pressed="false">EN</button>
+    </div>
     <div id="banner" class="banner" hidden></div>
   </header>
   <main>
@@ -161,7 +217,7 @@
       <div class="file-row">
         <button type="button" id="photo-button"></button>
         <span id="photo-name" class="file-name"></span>
-        <input id="photo" class="visually-hidden" name="photo" type="file" accept="image/jpeg,image/png,image/webp" />
+        <input id="photo" class="visually-hidden" name="photo" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" />
       </div>
       <label id="question-label" for="question"></label>
       <textarea id="question" name="question" maxlength="500"></textarea>
@@ -170,7 +226,7 @@
     </form>
     <div id="results"></div>
     <section id="tecnico">
-      <h2 id="tecnico-title"></h2>
+      <h2 id="consult-tecnico"></h2>
       <p id="tecnico-body"></p>
       <p><a href="https://www.centa.gob.sv/">CENTA</a></p>
     </section>
@@ -179,54 +235,60 @@
   <script>
     const STR = {
       es: {
-        tagline: "Orientación sobre la roya del cafeto para un pequeño caficultor en El Salvador.",
-        flow: "Clima → Alertas oficiales → Diagnóstico → Plan",
+        tagline: "Guía de roya del café para productores de El Salvador.",
         consult: "Consultar a un técnico",
         consultBody: "Para una visita, comuníquese con el técnico de su cooperativa o de la oficina agrícola más cercana.",
         disclaimer: "Los umbrales de riesgo son una estimación propia y no están validados por el ISC, CENTA ni el MAG. La lectura de la hoja es una orientación, no un diagnóstico.",
         department: "Departamento",
-        photo: "Foto de hoja (opcional)",
+        photo: "Foto de la hoja (opcional)",
         photoButton: "Elegir foto",
         photoEmpty: "Ningún archivo elegido",
-        question: "Pregunta (opcional)",
-        placeholder: "Pregunte por la semana. No respondemos dosis ni productos.",
-        submit: "Ejecutar agente",
-        running: "Consultando el clima, las alertas oficiales, el diagnóstico y el plan…",
-        failed: "No se pudo completar la consulta.",
-        error: "Algo salió mal. Intente de nuevo.",
-        mock: "Modo de prueba. Las respuestas del modelo son ejemplos, no una consulta en vivo.",
+        question: "Su pregunta (opcional)",
+        placeholder: "Ej.: ¿Conviene revisar el cafetal esta semana?",
+        submit: "Ver plan de la semana",
+        running: "Revisando clima, alertas y hoja…",
+        failed: "Algo falló. Intente de nuevo.",
+        error: "Algo falló. Intente de nuevo.",
+        mock: "Modo demostración: algunas respuestas son ejemplos.",
         badge: "Prueba",
         sample: " (ejemplo)",
         official: " (fuente oficial)",
         stale: " (sin actualizar)",
-        input: "entrada",
-        nodata: "sin datos",
-        steps: { clima: "Clima", alertas: "Alertas oficiales", diagnostico: "Diagnóstico", plan: "Plan" }
+        details: "Detalles técnicos",
+        orient: "Orientativo — no es un diagnóstico",
+        risk: "Riesgo",
+        nodata: "Sin datos",
+        levels: { alto: "ALTO", medio: "MEDIO", bajo: "BAJO" },
+        days: { alto: "Alto", medio: "Medio", bajo: "Bajo" },
+        steps: { clima: "1 Clima", alertas: "2 Alertas oficiales", diagnostico: "3 Hoja", plan: "4 Plan" }
       },
       en: {
-        tagline: "Coffee leaf rust guidance for a small farmer in El Salvador.",
-        flow: "Weather → Official alerts → Diagnosis → Plan",
+        tagline: "Coffee leaf rust guide for El Salvador growers.",
         consult: "Consult a technician",
         consultBody: "For a visit, contact the technician at your cooperative or the nearest farm office.",
-        disclaimer: "The risk thresholds are our own estimate and are not validated by ISC, CENTA, or MAG. The leaf reading is guidance, not a diagnosis.",
+        disclaimer: "Risk thresholds are our own estimate, not validated by ISC, CENTA or MAG. The leaf reading is guidance, not a diagnosis.",
         department: "Department",
         photo: "Leaf photo (optional)",
         photoButton: "Choose photo",
         photoEmpty: "No file selected",
-        question: "Question (optional)",
-        placeholder: "Ask about the week. Dose and product questions are refused.",
-        submit: "Run agent",
-        running: "Checking the weather, official alerts, the diagnosis, and the plan…",
-        failed: "The request could not be completed.",
+        question: "Your question (optional)",
+        placeholder: "E.g. Should I check the farm this week?",
+        submit: "Get this week's plan",
+        running: "Checking weather, alerts and leaf…",
+        failed: "Something went wrong. Try again.",
         error: "Something went wrong. Try again.",
-        mock: "Practice mode. Model replies below are samples, not a live consultation.",
+        mock: "Demo mode: some replies are samples.",
         badge: "Sample",
-        sample: " (sample citation)",
+        sample: " (sample)",
         official: " (official source)",
         stale: " (not updated)",
-        input: "input",
-        nodata: "no data",
-        steps: { clima: "Weather", alertas: "Official alerts", diagnostico: "Diagnosis", plan: "Plan" }
+        details: "Technical details",
+        orient: "Guidance only — not a diagnosis",
+        risk: "risk",
+        nodata: "No data",
+        levels: { alto: "HIGH", medio: "MEDIUM", bajo: "LOW" },
+        days: { alto: "High", medio: "Medium", bajo: "Low" },
+        steps: { clima: "1 Weather", alertas: "2 Official alerts", diagnostico: "3 Leaf", plan: "4 Plan" }
       }
     };
 
@@ -254,9 +316,12 @@
       document.querySelector("#lang-es").setAttribute("aria-pressed", lang === "es" ? "true" : "false");
       document.querySelector("#lang-en").setAttribute("aria-pressed", lang === "en" ? "true" : "false");
       document.querySelector("#tagline").textContent = textOf("tagline");
-      document.querySelector("#flow").textContent = textOf("flow");
+      const flow = document.querySelector("#flow");
+      flow.replaceChildren();
+      for (const id of ["clima", "alertas", "diagnostico", "plan"]) {
+        flow.appendChild(el("span", "", STR[lang].steps[id]));
+      }
       document.querySelector("#consult-tecnico").textContent = textOf("consult");
-      document.querySelector("#tecnico-title").textContent = textOf("consult");
       document.querySelector("#tecnico-body").textContent = textOf("consultBody");
       document.querySelector("#disclaimer").textContent = textOf("disclaimer");
       document.querySelector("#department-label").textContent = textOf("department");
@@ -290,8 +355,6 @@
 
     fetch("/api/health").then((response) => response.json()).then((body) => {
       health = body;
-      const consult = document.querySelector("#consult-tecnico");
-      if (health.consult_href && consult) consult.href = health.consult_href;
       if (!health.mock) return;
       banner.hidden = false;
       banner.textContent = textOf("mock");
@@ -333,8 +396,17 @@
     function render(body) {
       results.replaceChildren();
       const copy = STR[lang];
+      const shared = body.steps.find((step) => step.detail && step.detail.consult_href);
+      const sharedHref = shared ? shared.detail.consult_href : "#tecnico";
+      const sharedLabel = shared && shared.detail.consult_label ? shared.detail.consult_label : copy.consult;
       for (const step of body.steps) {
         const card = el("article", "step");
+        const detail = step.detail || {};
+        if (step.id === "clima" && detail.worst && copy.levels[detail.worst]) {
+          const word = copy.levels[detail.worst];
+          const risk = el("p", "level " + detail.worst, lang === "en" ? word + " " + copy.risk : copy.risk + " " + word);
+          card.appendChild(risk);
+        }
         const title = el("h2", "", copy.steps[step.id] || step.title);
         if (step.mock) title.appendChild(el("span", "badge", copy.badge));
         card.appendChild(title);
@@ -343,17 +415,26 @@
         if (model) bits.push(model);
         if (step.latency_ms != null) bits.push(step.latency_ms + " ms");
         if (step.tokens && step.tokens.total_tokens != null) bits.push(step.tokens.total_tokens + " tokens");
-        bits.push(copy.input + " " + step.input_sha256.slice(0, 12));
-        card.appendChild(el("p", "meta", bits.join(" · ")));
+        if (step.input_sha256) bits.push(step.input_sha256.slice(0, 12));
+        if (bits.length) {
+          const tech = el("details", "tech");
+          const summary = el("summary", "", copy.details);
+          tech.appendChild(summary);
+          tech.appendChild(el("p", "meta", bits.join(" · ")));
+          card.appendChild(tech);
+        }
         card.appendChild(el("div", "farmer", step.farmer_text));
-        const detail = step.detail || {};
         if (detail.trust_sentence) card.appendChild(el("p", "trust", detail.trust_sentence));
-        if (detail.orientation_tag) card.appendChild(el("p", "orientation", detail.orientation_tag));
-        if (detail.consult_label && detail.consult_href) {
-          const consult = el("a", "consult", detail.consult_label);
-          consult.href = detail.consult_href;
-          consult.target = "_blank";
-          consult.rel = "noopener noreferrer";
+        if (step.id === "diagnostico") {
+          card.appendChild(el("p", "orientation", detail.orientation_tag || copy.orient));
+        }
+        if (step.id === "diagnostico" || step.id === "plan") {
+          const consult = el("a", "consult", step.id === "diagnostico" && detail.consult_label ? detail.consult_label : sharedLabel);
+          consult.href = detail.consult_href || sharedHref;
+          if (consult.href !== "#tecnico") {
+            consult.target = "_blank";
+            consult.rel = "noopener noreferrer";
+          }
           card.appendChild(consult);
         }
         const days = detail.days;
@@ -361,7 +442,10 @@
           const row = el("div", "days");
           for (const day of days) {
             const level = day.level || "";
-            const chip = el("div", "day " + level, (level || copy.nodata) + " " + day.date.slice(5));
+            const parts = String(day.date || "").split("-");
+            const shown = level ? copy.days[level] + " " + parts[2] + "/" + parts[1] : copy.nodata;
+            const chip = el("div", "day " + (level || "sin-datos"), shown);
+            chip.setAttribute("aria-label", day.date || shown);
             row.appendChild(chip);
           }
           card.appendChild(row);

@@ -46,17 +46,22 @@ def test_health_page_and_mock_run(tmp_path):
 
     page = client.get("/")
     assert page.status_code == 200
-    assert "Clima → Alertas oficiales → Diagnóstico → Plan" in page.text
     assert "The page chrome is English. Text for the farmer is Spanish." not in page.text
     assert 'lang="es"' in page.text
+    assert "Guía de roya del café para productores de El Salvador." in page.text
+    assert "Coffee leaf rust guide for El Salvador growers." in page.text
     assert "Departamento" in page.text
     assert "Department" in page.text
-    assert "Foto de hoja (opcional)" in page.text
+    assert "Foto de la hoja (opcional)" in page.text
     assert "Leaf photo (optional)" in page.text
-    assert "Ejecutar agente" in page.text
-    assert "Run agent" in page.text
-    assert "Consult a technician" in page.text
+    assert "Ver plan de la semana" in page.text
+    assert "Get this week's plan" in page.text
+    assert "1 Clima" in page.text
+    assert "Orientativo — no es un diagnóstico" in page.text
+    assert "Detalles técnicos" in page.text
+    assert "Modo demostración: algunas respuestas son ejemplos." in page.text
     assert "localStorage" in page.text
+    assert "grid-template-columns: 1fr auto" in page.text
     assert 'rel="icon"' in page.text
     assert "trust_sentence" in page.text
     assert "orientation_tag" in page.text
