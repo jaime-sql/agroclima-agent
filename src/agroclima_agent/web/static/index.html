@@ -416,15 +416,16 @@
         if (step.latency_ms != null) bits.push(step.latency_ms + " ms");
         if (step.tokens && step.tokens.total_tokens != null) bits.push(step.tokens.total_tokens + " tokens");
         if (step.input_sha256) bits.push(step.input_sha256.slice(0, 12));
-        if (bits.length) {
+        if (bits.length || detail.trust_sentence) {
           const tech = el("details", "tech");
           const summary = el("summary", "", copy.details);
           tech.appendChild(summary);
-          tech.appendChild(el("p", "meta", bits.join(" · ")));
+          if (bits.length) tech.appendChild(el("p", "meta", bits.join(" · ")));
+          // Accuracy and recall figures live only inside Detalles técnicos.
+          if (detail.trust_sentence) tech.appendChild(el("p", "trust", detail.trust_sentence));
           card.appendChild(tech);
         }
         card.appendChild(el("div", "farmer", step.farmer_text));
-        if (detail.trust_sentence) card.appendChild(el("p", "trust", detail.trust_sentence));
         if (step.id === "diagnostico") {
           card.appendChild(el("p", "orientation", detail.orientation_tag || copy.orient));
         }
