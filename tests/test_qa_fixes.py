@@ -127,8 +127,8 @@ def test_missing_tavily_key_does_not_mock_the_app(tmp_path):
     assert health["tavily_configured"] is False
     page = client_http.get("/").text
     assert 'id="consult-tecnico"' in page
+    assert 'id="tecnico"' in page
     assert "Consultar a un técnico" in page
-    assert 'href="#tecnico"' in page
     assert 'id="banner" class="banner" hidden' in page
 
     def handler(request: httpx.Request) -> httpx.Response:
