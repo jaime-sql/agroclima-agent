@@ -34,6 +34,10 @@ where = ["src"]
 [tool.setuptools.package-data]
 agroclima_agent = ["data/*.json", "web/static/*"]
 
+[tool.vercel]
+entrypoint = "api.index:app"
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
+pythonpath = ["."]

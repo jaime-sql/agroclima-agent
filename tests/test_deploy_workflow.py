@@ -3,10 +3,10 @@ from pathlib import Path
 
 def test_deploy_workflow_publishes_the_dockerfile_to_cloud_run():
     text = Path(".github/workflows/deploy.yml").read_text(encoding="utf-8")
+    trigger = text.split("jobs:", 1)[0]
+    assert "workflow_dispatch:" in trigger
+    assert "push:" not in trigger
     for snippet in (
-        "workflow_dispatch:",
-        "branches:",
-        "- main",
         "databank-sv-123456",
         "gcloud projects undelete databank-sv-123456",
         "us-central1",
