@@ -1,0 +1,15 @@
+#!/bin/sh
+# One-command local run. Creates .venv on first use. Mock mode if keys are unset.
+set -eu
+cd "$(dirname "$0")"
+if [ ! -x .venv/bin/agroclima ]; then
+  python3 -m venv .venv
+  .venv/bin/pip install -e .
+fi
+if [ -f .env ]; then
+  set -a
+  # shellcheck disable=SC1091
+  . ./.env
+  set +a
+fi
+exec .venv/bin/agroclima
