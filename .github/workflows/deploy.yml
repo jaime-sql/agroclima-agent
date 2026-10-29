@@ -1,0 +1,171 @@
+name: deploy
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-agroclima-agent
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY_JSON }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Enable Cloud Run build APIs
+        run: |
+          gcloud services enable \
+            run.googleapis.com \
+            cloudbuild.googleapis.com \
+            artifactregistry.googleapis.com \
+            --project databank-sv-123456
+
+      - name: Write Cloud Run env file
+        env:
+          NEBIUS_API_KEY: ${{ secrets.NEBIUS_API_KEY }}
+          TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
+        run: |
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+
+          values = {
+              "NEBIUS_API_KEY": os.environ.get("NEBIUS_API_KEY", ""),
+              "TAVILY_API_KEY": os.environ.get("TAVILY_API_KEY", ""),
+              "NEBIUS_BASE_URL": "https://api.tokenfactory.nebius.com/v1",
+              "NEBIUS_MODEL_NANO": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B",
+              "NEBIUS_MODEL_PLAN": "nvidia/nemotron-3-super-120b-a12b",
+              "NEBIUS_MODEL_VISION": "nvidia/Nemotron-3.5-Super-VL",
+              "AGROCLIMA_HOST": "0.0.0.0",
+              "AGROCLIMA_AUDIT_LOG": "/tmp/audit.jsonl",
+              "AGROCLIMA_TAVILY_CACHE": "/tmp/tavily-cache.json",
+              "AGROCLIMA_TAVILY_COUNTER": "/tmp/tavily-usage.json",
+          }
+          missing = [name for name in ("NEBIUS_API_KEY", "TAVILY_API_KEY") if not values[name].strip()]
+          if missing:
+              raise SystemExit("missing env: " + ", ".join(missing))
+
+          def quote(value: str) -> str:
+              escaped = value.replace("\\", "\\\\").replace('"', '\\"')
+              return f'"{escaped}"'
+
+          # TECHNICIAN_WHATSAPP is left unset so the consult link stays on the page.
+          lines = [f"{key}: {quote(value)}" for key, value in values.items()]
+          path = Path(os.environ["RUNNER_TEMP"]) / "agroclima-env.yaml"
+          path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+          path.chmod(0o600)
+          PY
+
+      - name: Deploy Dockerfile to Cloud Run
+        id: deploy
+        run: |
+          set -eu
+          url="$(gcloud run deploy agroclima-agent \
+            --project=databank-sv-123456 \
+            --region=us-central1 \
+            --source=. \
+            --allow-unauthenticated \
+            --port=8080 \
+            --command=python \
+            --args=-m,agroclima_agent \
+            --timeout=300 \
+            --memory=1Gi \
+            --max-instances=3 \
+            --env-vars-file="${RUNNER_TEMP}/agroclima-env.yaml" \
+            --format='value(status.url)' \
+            --quiet)"
+          echo "service_url=${url}" >> "$GITHUB_OUTPUT"
+          echo "service_url=${url}"
+
+      - name: Curl health and one live model call
+        env:
+          SERVICE_URL: ${{ steps.deploy.outputs.service_url }}
+        run: |
+          set -eu
+          url="${SERVICE_URL%/}"
+          health_path="${RUNNER_TEMP}/health.json"
+          run_path="${RUNNER_TEMP}/run.json"
+          code=""
+          for _ in 1 2 3 4 5 6 7 8 9 10 11 12; do
+            code="$(curl -sS -o "$health_path" -w '%{http_code}' "${url}/api/health" || true)"
+            echo "health_http=${code}"
+            if [ "$code" = "200" ]; then
+              break
+            fi
+            sleep 5
+          done
+          echo "----- health body -----"
+          cat "$health_path"
+          echo
+          if [ "$code" != "200" ]; then
+            echo "health did not return 200"
+            exit 1
+          fi
+          HEALTH_PATH="$health_path" python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          health = json.loads(Path(os.environ["HEALTH_PATH"]).read_text(encoding="utf-8"))
+          if health.get("ok") is not True:
+              raise SystemExit("health ok is not true")
+          if health.get("mock") is not False:
+              raise SystemExit("health is in mock mode: " + ", ".join(health.get("mock_reasons") or []))
+          if health.get("nebius_configured") is not True:
+              raise SystemExit("NEBIUS_API_KEY is not configured on the service")
+          href = str(health.get("consult_href") or "")
+          if "wa.me" in href:
+              raise SystemExit("TECHNICIAN_WHATSAPP must stay empty")
+          PY
+
+          code="$(curl -sS -o "$run_path" -w '%{http_code}' --max-time 300 \
+            -F 'department=Santa Ana' \
+            -F 'question=Resuma el riesgo de roya de esta semana en una frase.' \
+            "${url}/api/run" || true)"
+          echo "run_http=${code}"
+          echo "----- run body -----"
+          cat "$run_path"
+          echo
+          RUN_PATH="$run_path" RUN_HTTP="$code" python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          if os.environ["RUN_HTTP"] != "200":
+              raise SystemExit("model call did not return 200")
+          body = json.loads(Path(os.environ["RUN_PATH"]).read_text(encoding="utf-8"))
+          if body.get("mock") is not False:
+              raise SystemExit("response is mock mode: " + ", ".join(body.get("mock_reasons") or []))
+          live = []
+          for step in body.get("steps") or []:
+              model = str(step.get("model_id") or "")
+              text = str(step.get("farmer_text") or "").strip()
+              if "nemotron" in model.lower() and step.get("mock") is False and text:
+                  live.append(step)
+          if not live:
+              summary = [
+                  {
+                      "id": step.get("id"),
+                      "model_id": step.get("model_id"),
+                      "mock": step.get("mock"),
+                  }
+                  for step in body.get("steps") or []
+              ]
+              raise SystemExit("no live Nemotron answer: " + json.dumps(summary, ensure_ascii=False))
+          print("live_model=" + str(live[0]["model_id"]))
+          print("live_answer=" + str(live[0]["farmer_text"]))
+          PY

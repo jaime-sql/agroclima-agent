@@ -34,6 +34,31 @@ def _positive_int(name: str, default: int) -> int:
     return value if value >= 0 else default
 
 
+def _listen_port() -> int:
+    """Cloud Run injects PORT. AGROCLIMA_PORT applies when PORT is absent or invalid."""
+    for name in ("PORT", "AGROCLIMA_PORT"):
+        raw = _blank(name)
+        if raw is None:
+            continue
+        try:
+            value = int(raw)
+        except ValueError:
+            continue
+        if 1 <= value <= 65535:
+            return value
+    return 8000
+
+
+def _listen_host() -> str:
+    """Bind every interface on Cloud Run. Local runs stay on localhost unless overridden."""
+    host = _blank("AGROCLIMA_HOST")
+    if host is not None:
+        return host
+    if _blank("PORT"):
+        return "0.0.0.0"
+    return "127.0.0.1"
+
+
 @dataclass(frozen=True)
 class Settings:
     nebius_api_key: str | None
@@ -72,11 +97,6 @@ class Settings:
 
 
 def load_settings() -> Settings:
-    port_raw = _blank("AGROCLIMA_PORT") or "8000"
-    try:
-        port = int(port_raw)
-    except ValueError:
-        port = 8000
     return Settings(
         nebius_api_key=_blank("NEBIUS_API_KEY"),
         nebius_base_url=(_blank("NEBIUS_BASE_URL") or DEFAULT_BASE_URL).rstrip("/"),
@@ -85,8 +105,8 @@ def load_settings() -> Settings:
         model_plan=_blank("NEBIUS_MODEL_PLAN") or DEFAULT_PLAN,
         model_vision=_blank("NEBIUS_MODEL_VISION") or DEFAULT_VISION,
         audit_log=Path(_blank("AGROCLIMA_AUDIT_LOG") or "var/audit.jsonl"),
-        host=_blank("AGROCLIMA_HOST") or "127.0.0.1",
-        port=port,
+        host=_listen_host(),
+        port=_listen_port(),
         open_meteo_base_url=(_blank("OPEN_METEO_BASE_URL") or DEFAULT_OPEN_METEO).rstrip("/"),
         tavily_daily_cap=_positive_int("TAVILY_DAILY_CAP", DEFAULT_TAVILY_DAILY_CAP),
         tavily_total_cap=_positive_int("TAVILY_TOTAL_CAP", DEFAULT_TAVILY_TOTAL_CAP),

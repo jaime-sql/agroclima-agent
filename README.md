@@ -62,7 +62,7 @@ The web form asks for a department, an optional leaf photo, and an optional ques
 | `NEBIUS_MODEL_PLAN` | No | Super id above, or Ultra |
 | `NEBIUS_MODEL_VISION` | No | Vision id above |
 | `AGROCLIMA_AUDIT_LOG` | No | JSONL audit path, default `var/audit.jsonl` |
-| `AGROCLIMA_HOST` / `AGROCLIMA_PORT` | No | Default `127.0.0.1:8000` |
+| `AGROCLIMA_HOST` / `AGROCLIMA_PORT` | No | Default `127.0.0.1:8000`. Cloud Run injects `PORT`, and that value wins. An unset host listens on `0.0.0.0` when `PORT` is set |
 | `OPEN_METEO_BASE_URL` | No | Forecast endpoint |
 
 Only `.env.example` is committed. `.env` is gitignored. The audit log stores a SHA-256 of the redacted input, the model id, latency, and token counts when the API returns them. It does not store the keys, the photo, or the raw question.

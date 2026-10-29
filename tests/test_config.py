@@ -43,6 +43,39 @@ def test_plan_model_can_switch_to_ultra(monkeypatch):
     assert settings.tavily_configured is False
 
 
+def test_cloud_run_port_wins_and_opens_the_host(monkeypatch):
+    monkeypatch.setenv("PORT", "8080")
+    monkeypatch.setenv("AGROCLIMA_PORT", "8000")
+    monkeypatch.delenv("AGROCLIMA_HOST", raising=False)
+    settings = load_settings()
+    assert settings.port == 8080
+    assert settings.host == "0.0.0.0"
+
+
+def test_explicit_host_is_kept_when_cloud_run_sets_port(monkeypatch):
+    monkeypatch.setenv("PORT", "8080")
+    monkeypatch.setenv("AGROCLIMA_HOST", "0.0.0.0")
+    settings = load_settings()
+    assert settings.port == 8080
+    assert settings.host == "0.0.0.0"
+
+
+def test_local_port_and_host_without_cloud_run_port(monkeypatch):
+    monkeypatch.delenv("PORT", raising=False)
+    monkeypatch.setenv("AGROCLIMA_PORT", "9000")
+    monkeypatch.setenv("AGROCLIMA_HOST", "127.0.0.1")
+    settings = load_settings()
+    assert settings.port == 9000
+    assert settings.host == "127.0.0.1"
+
+
+def test_invalid_cloud_run_port_uses_agroclima_port(monkeypatch):
+    monkeypatch.setenv("PORT", "nope")
+    monkeypatch.setenv("AGROCLIMA_PORT", "8000")
+    settings = load_settings()
+    assert settings.port == 8000
+
+
 def test_env_example_lists_secrets_without_values():
     text = open(".env.example", encoding="utf-8").read()
     for name in (
