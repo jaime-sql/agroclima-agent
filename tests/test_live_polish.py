@@ -37,3 +37,10 @@ def test_plan_english_has_no_spanish():
 
 def test_to_english_levels():
     assert to_english("riesgo medio") == "riesgo medium"
+
+
+def test_plan_has_one_centa_link():
+    text = "The risk is high. Tell your agronomist about the high-risk day; see https://www.centa.gob.sv for more info."
+    out = _publish_plan(text, _Decision("Friday 30, 7:00–10:00 a.m."), "en")
+    assert out.count("centa.gob.sv") == 1
+    assert out.endswith(CENTA_LINE)

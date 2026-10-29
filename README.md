@@ -1,5 +1,7 @@
 # AgroClima Agent
 
+**Live demo:** https://agroclima-demo.jaime-8a8.workers.dev (stable Cloudflare Worker proxy in front of the Nebius AI endpoint).
+
 Public demo: https://port8080-mvk3d4wrrkt7g6k.tunnel.applications.us-north1.nebius.cloud
 
 AgroClima Agent helps a small coffee farmer in El Salvador see the week’s coffee-rust risk, current official alerts, a leaf check, and a short plan. Risk levels and technician handoff are fixed rules. NVIDIA open models on Nebius Token Factory only summarize, read the leaf, and word the plan that the rules already decided.
