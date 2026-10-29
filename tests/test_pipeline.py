@@ -69,7 +69,7 @@ def test_mock_run_keeps_rules_ahead_of_the_plan_model(tmp_path):
     assert result.steps[1].citations[0].title == "Sin alerta oficial"
     assert "guardadas" not in result.steps[1].farmer_text
     assert "visita anterior" not in result.steps[1].farmer_text
-    assert result.steps[1].model_id == "template/fallback"
+    assert result.steps[1].model_id == "deterministic/no-alert"
     plan_calls = [call for call in client.calls if call["step"] == "plan"]
     assert plan_calls
     assert plan_calls[0]["model"] == settings.model_plan

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from agroclima_agent.english import to_english
+
 from dataclasses import dataclass
 
 from agroclima_agent.diagnosis import InterpretedDiagnosis
@@ -77,12 +79,12 @@ class Decision:
         elif self.worst == "bajo":
             action = "What: keep checking leaves. The weather in this department looks less favorable for rust."
         else:
-            classes = ", ".join(self.fungicide_classes)
+            classes = to_english(", ".join(self.fungicide_classes))
             action = (
                 f"What: if your agronomist says so, use a product from one of these classes: {classes}. "
                 "Cover the underside of the leaf and rotate the mode of action."
             )
-        dose = f"How much: {self.dose_note}."
+        dose = f"How much: {to_english(self.dose_note)}."
         when = (
             f"When: {self.spray_window}."
             if self.spray_window
