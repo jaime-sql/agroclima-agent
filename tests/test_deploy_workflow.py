@@ -8,6 +8,7 @@ def test_deploy_workflow_publishes_the_dockerfile_to_cloud_run():
         "branches:",
         "- main",
         "databank-sv-123456",
+        "gcloud projects undelete databank-sv-123456",
         "us-central1",
         "agroclima-agent",
         "google-github-actions/auth@",
