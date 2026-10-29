@@ -1,4 +1,5 @@
 from fastapi.testclient import TestClient
+from pathlib import Path
 from PIL import Image
 from io import BytesIO
 
@@ -110,3 +111,10 @@ def test_health_page_and_mock_run(tmp_path):
 
     unknown = client.post("/api/run", data={"department": "Narnia"})
     assert unknown.status_code == 400
+
+
+def test_trust_sentence_renders_only_inside_details():
+    page = (Path(__file__).resolve().parents[1] / "src/agroclima_agent/web/static/index.html").read_text()
+    assert 'tech.appendChild(el("p", "trust", detail.trust_sentence))' in page
+    assert 'card.appendChild(el("p", "trust"' not in page
+    assert "Orientativo — no es un diagnóstico" in page
