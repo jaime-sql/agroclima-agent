@@ -5,6 +5,8 @@ Risk levels and technician handoff are fixed before any plan narrative call.
 
 from __future__ import annotations
 
+from agroclima_agent.english import payload_to_english, to_english
+
 import json
 import re
 from dataclasses import asdict, dataclass, replace
@@ -58,6 +60,8 @@ from agroclima_agent.safety import asks_for_dose, contains_dose, guard_untrusted
 REFUSAL = "No puedo dar dosis ni nombres de productos. Siga la etiqueta o consulte a su agrónomo."
 QUESTION_FALLBACK = "No pude responder esa pregunta. Consultar a un técnico."
 TEMPLATE_MODEL = "template/fallback"
+# No saved bulletin for the department: an honest skip, not a model fallback.
+NO_ALERT_MODEL = "deterministic/no-alert"
 LEVEL_WORDS = ("bajo", "medio", "alto")
 STATUS_LIVE = "Listo."
 STATUS_FALLBACK = "Listo. Algunas partes usaron respaldo."
@@ -292,18 +296,33 @@ def _narrative_ok(text: str, decision: Decision) -> bool:
     return True
 
 
+_CLOCK_SENTENCE = re.compile(
+    r"[^.?!]*\b\d{1,2}:\d{2}(?:[ap]\.\s?m\b\.?|[^.?!])*[.?!]?", re.IGNORECASE
+)
+
+
+def _sentence(text: str) -> str:
+    text = text.strip()
+    if not text:
+        return ""
+    return text if text[-1] in ".?!" else text + "."
+
+
 def _publish_plan(text: str, decision: Decision, language: str) -> str:
     """Farmer plan: no raw ISO, no internal words, and the real CENTA number."""
     cleaned = _ISO_STAMP.sub("", text)
     cleaned = _HANDOFF_WORD.sub("", cleaned)
     cleaned = _DOSE_ORDER.sub("", cleaned)
     cleaned = _MANGLED_PHONE.sub("", cleaned)
-    cleaned = re.sub(r"\s{2,}", " ", cleaned).strip(" .,")
     window = decision.spray_window
     if window:
-        if window not in cleaned:
-            label = "When" if language == "en" else "Cuándo"
-            cleaned = f"{cleaned} {label}: {window}."
+        # The model may restate the time in its own words. Keep one canonical line.
+        cleaned = _CLOCK_SENTENCE.sub("", cleaned)
+    cleaned = re.sub(r"\s{2,}", " ", cleaned).strip(" ,")
+    cleaned = _sentence(cleaned)
+    if window:
+        label = "When" if language == "en" else "Cuándo"
+        cleaned = f"{cleaned} {_sentence(f'{label}: {window}')}"
     else:
         missing = (
             "There is no suitable window in the coming days."
@@ -312,9 +331,12 @@ def _publish_plan(text: str, decision: Decision, language: str) -> str:
         )
         if missing.lower().rstrip(".") not in cleaned.lower():
             cleaned = f"{cleaned} {missing}"
+    if language == "en":
+        cleaned = to_english(cleaned)
     if decision.handoff_required and "2397-2200" not in cleaned:
-        cleaned = f"{cleaned} {CENTA_LINE}"
-    return re.sub(r"\s{2,}", " ", cleaned).strip()
+        cleaned = f"{_sentence(cleaned)} {CENTA_LINE}"
+    cleaned = re.sub(r"\.{2,}", ".", cleaned)
+    return re.sub(r"\\s{2,}", " ", cleaned).strip()
 
 
 def run_agent(
@@ -472,7 +494,7 @@ def run_agent(
         citations = [replace(item, title=title, snippet=line) for item in citations]
         alert_text = line
         alert_mock = False
-        alert_model = TEMPLATE_MODEL
+        alert_model = NO_ALERT_MODEL
         alert_latency = None
         alert_tokens = None
     elif stale:
@@ -640,6 +662,8 @@ def run_agent(
         language=lang,
     )
     template = decision.template_for(lang)
+    if lang == "en":
+        template = to_english(template)
     plan_payload = decision.as_dict()
     if not decision.fungicide_classes:
         plan_payload.pop("fungicide_classes", None)
@@ -652,6 +676,7 @@ def run_agent(
         .strip()
     )
     if lang == "en":
+        plan_payload = payload_to_english(plan_payload)
         user_plan = (
             "The decision is already made. Do not change it:\n"
             + json.dumps(plan_payload, ensure_ascii=False)
