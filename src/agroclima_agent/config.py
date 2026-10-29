@@ -59,6 +59,21 @@ def _listen_host() -> str:
     return "127.0.0.1"
 
 
+def _on_vercel() -> bool:
+    """Vercel sets VERCEL=1 for production, preview, and vercel dev."""
+    return _blank("VERCEL") == "1"
+
+
+def _var_path(env_name: str, relative: str) -> Path:
+    """Honor an explicit path. On Vercel, var/ files move to /tmp."""
+    explicit = _blank(env_name)
+    if explicit is not None:
+        return Path(explicit)
+    if _on_vercel():
+        return Path("/tmp") / Path(relative).name
+    return Path(relative)
+
+
 @dataclass(frozen=True)
 class Settings:
     nebius_api_key: str | None
@@ -104,13 +119,13 @@ def load_settings() -> Settings:
         model_nano=_blank("NEBIUS_MODEL_NANO") or DEFAULT_NANO,
         model_plan=_blank("NEBIUS_MODEL_PLAN") or DEFAULT_PLAN,
         model_vision=_blank("NEBIUS_MODEL_VISION") or DEFAULT_VISION,
-        audit_log=Path(_blank("AGROCLIMA_AUDIT_LOG") or "var/audit.jsonl"),
+        audit_log=_var_path("AGROCLIMA_AUDIT_LOG", "var/audit.jsonl"),
         host=_listen_host(),
         port=_listen_port(),
         open_meteo_base_url=(_blank("OPEN_METEO_BASE_URL") or DEFAULT_OPEN_METEO).rstrip("/"),
         tavily_daily_cap=_positive_int("TAVILY_DAILY_CAP", DEFAULT_TAVILY_DAILY_CAP),
         tavily_total_cap=_positive_int("TAVILY_TOTAL_CAP", DEFAULT_TAVILY_TOTAL_CAP),
-        tavily_cache_path=Path(_blank("AGROCLIMA_TAVILY_CACHE") or "var/tavily-cache.json"),
-        tavily_counter_path=Path(_blank("AGROCLIMA_TAVILY_COUNTER") or "var/tavily-usage.json"),
+        tavily_cache_path=_var_path("AGROCLIMA_TAVILY_CACHE", "var/tavily-cache.json"),
+        tavily_counter_path=_var_path("AGROCLIMA_TAVILY_COUNTER", "var/tavily-usage.json"),
         technician_whatsapp=_blank("TECHNICIAN_WHATSAPP"),
     )

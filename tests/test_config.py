@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from agroclima_agent.config import (
     DEFAULT_NANO,
     DEFAULT_PLAN,
@@ -74,6 +76,33 @@ def test_invalid_cloud_run_port_uses_agroclima_port(monkeypatch):
     monkeypatch.setenv("AGROCLIMA_PORT", "8000")
     settings = load_settings()
     assert settings.port == 8000
+
+
+def test_local_var_paths_stay_under_var(monkeypatch):
+    monkeypatch.delenv("VERCEL", raising=False)
+    for name in ("AGROCLIMA_AUDIT_LOG", "AGROCLIMA_TAVILY_CACHE", "AGROCLIMA_TAVILY_COUNTER"):
+        monkeypatch.delenv(name, raising=False)
+    settings = load_settings()
+    assert settings.audit_log == Path("var/audit.jsonl")
+    assert settings.tavily_cache_path == Path("var/tavily-cache.json")
+    assert settings.tavily_counter_path == Path("var/tavily-usage.json")
+
+
+def test_vercel_writes_var_paths_to_tmp(monkeypatch):
+    monkeypatch.setenv("VERCEL", "1")
+    for name in ("AGROCLIMA_AUDIT_LOG", "AGROCLIMA_TAVILY_CACHE", "AGROCLIMA_TAVILY_COUNTER"):
+        monkeypatch.delenv(name, raising=False)
+    settings = load_settings()
+    assert settings.audit_log == Path("/tmp/audit.jsonl")
+    assert settings.tavily_cache_path == Path("/tmp/tavily-cache.json")
+    assert settings.tavily_counter_path == Path("/tmp/tavily-usage.json")
+
+
+def test_explicit_paths_win_on_vercel(monkeypatch):
+    monkeypatch.setenv("VERCEL", "1")
+    monkeypatch.setenv("AGROCLIMA_AUDIT_LOG", "var/custom.jsonl")
+    settings = load_settings()
+    assert settings.audit_log == Path("var/custom.jsonl")
 
 
 def test_env_example_lists_secrets_without_values():

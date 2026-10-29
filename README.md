@@ -61,7 +61,7 @@ The web form asks for a department, an optional leaf photo, and an optional ques
 | `NEBIUS_MODEL_NANO` | No | Nano id above |
 | `NEBIUS_MODEL_PLAN` | No | Super id above, or Ultra |
 | `NEBIUS_MODEL_VISION` | No | Vision id above |
-| `AGROCLIMA_AUDIT_LOG` | No | JSONL audit path, default `var/audit.jsonl` |
+| `AGROCLIMA_AUDIT_LOG` | No | JSONL audit path, default `var/audit.jsonl`. On Vercel this default is `/tmp/audit.jsonl` |
 | `AGROCLIMA_HOST` / `AGROCLIMA_PORT` | No | Default `127.0.0.1:8000`. Cloud Run injects `PORT`, and that value wins. An unset host listens on `0.0.0.0` when `PORT` is set |
 | `OPEN_METEO_BASE_URL` | No | Forecast endpoint |
 
@@ -129,6 +129,12 @@ The web UI, if you want it in the same image:
 ```bash
 docker run --rm -p 8000:8000 agroclima-agent python -m agroclima_agent
 ```
+
+## Vercel
+
+`api/index.py` exports the FastAPI app for Vercel’s Python runtime. The same process serves the page, `/api/health`, and `/api/run`. When `VERCEL=1`, the `var/` audit and Tavily files are written under `/tmp`. `NEBIUS_API_KEY` and `TAVILY_API_KEY` are read from the environment. Leave `TECHNICIAN_WHATSAPP` empty.
+
+In the Vercel project, use framework preset **FastAPI**, root directory **.** (the repository root), and no build command, install-command override, or output directory. `pyproject.toml` sets the entrypoint to `api.index:app`.
 
 ## Tests
 
