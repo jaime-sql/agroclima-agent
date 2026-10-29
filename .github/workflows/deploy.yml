@@ -26,13 +26,62 @@ jobs:
 
       - uses: google-github-actions/setup-gcloud@v2
 
+      - name: Restore GCP project if deletion is pending
+        run: |
+          set -eu
+          describe_err="${RUNNER_TEMP}/project-describe.err"
+          state=""
+          set +e
+          state="$(gcloud projects describe databank-sv-123456 --format='value(lifecycleState)' 2>"$describe_err")"
+          code=$?
+          set -e
+          if [ "$code" -ne 0 ]; then
+            cat "$describe_err"
+            if grep -Eqi 'has been deleted|DELETE_REQUESTED' "$describe_err"; then
+              gcloud projects undelete databank-sv-123456
+            else
+              exit "$code"
+            fi
+          elif [ "$state" = "DELETE_REQUESTED" ]; then
+            gcloud projects undelete databank-sv-123456
+          fi
+          for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18; do
+            set +e
+            state="$(gcloud projects describe databank-sv-123456 --format='value(lifecycleState)' 2>"$describe_err")"
+            code=$?
+            set -e
+            echo "project_state=${state:-unknown} describe_code=${code}"
+            if [ "$code" -eq 0 ] && [ "$state" = "ACTIVE" ]; then
+              exit 0
+            fi
+            cat "$describe_err" || true
+            sleep 10
+          done
+          echo "GCP project databank-sv-123456 is not ACTIVE"
+          exit 1
+
       - name: Enable Cloud Run build APIs
         run: |
-          gcloud services enable \
-            run.googleapis.com \
-            cloudbuild.googleapis.com \
-            artifactregistry.googleapis.com \
-            --project databank-sv-123456
+          set -eu
+          for _ in 1 2 3 4 5 6 7 8 9 10; do
+            set +e
+            err="$(gcloud services enable \
+              run.googleapis.com \
+              cloudbuild.googleapis.com \
+              artifactregistry.googleapis.com \
+              --project databank-sv-123456 2>&1)"
+            code=$?
+            set -e
+            echo "$err"
+            if [ "$code" -eq 0 ]; then
+              exit 0
+            fi
+            if echo "$err" | grep -Eqi 'permission|denied|IAM_PERMISSION'; then
+              exit "$code"
+            fi
+            sleep 15
+          done
+          exit 1
 
       - name: Write Cloud Run env file
         env:
