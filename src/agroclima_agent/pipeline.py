@@ -331,9 +331,33 @@ def _sentence(text: str) -> str:
     return text if text[-1] in ".?!" else text + "."
 
 
+AUTHORIZATION_ES = "consulte a un técnico de CENTA o de su cooperativa antes de aplicar cualquier producto"
+AUTHORIZATION_EN = "check with a CENTA or co-op technician before applying any product"
+_AUTHORIZED = re.compile(
+    r"\b(?:permitid[oa]s?|aprobad[oa]s?|autorizad[oa]s?|permitted|approved|authori[sz]ed)\b",
+    re.IGNORECASE,
+)
+
+
+def neutral_product_wording(text: str, language: str) -> str:
+    """No wording may imply that a product is authorized. Swap those sentences for a neutral line."""
+    line = AUTHORIZATION_EN if language == "en" else AUTHORIZATION_ES
+    line = line[0].upper() + line[1:] + "."
+    parts = re.split(r"(?<=[.?!])\s+", text.strip())
+    out: list[str] = []
+    for part in parts:
+        if _AUTHORIZED.search(part):
+            if line not in out:
+                out.append(line)
+        else:
+            out.append(part)
+    return " ".join(out)
+
+
 def _publish_plan(text: str, decision: Decision, language: str) -> str:
     """Farmer plan: no raw ISO, no internal words, and the real CENTA number."""
-    cleaned = _ISO_STAMP.sub("", text)
+    cleaned = neutral_product_wording(text, language)
+    cleaned = _ISO_STAMP.sub("", cleaned)
     cleaned = _HANDOFF_WORD.sub("", cleaned)
     cleaned = _DOSE_ORDER.sub("", cleaned)
     cleaned = _MANGLED_PHONE.sub("", cleaned)
