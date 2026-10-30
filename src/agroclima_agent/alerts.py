@@ -196,6 +196,22 @@ class AlertSearch:
         entry = cache.get(department)
         return entry if isinstance(entry, dict) else None
 
+    def fetched_on(self, department: str) -> str | None:
+        """Day the cached Tavily result was fetched, as DD/MM/YYYY in El Salvador time."""
+        entry = self._entry(department)
+        raw = entry.get("fetched_at") if entry else None
+        if not isinstance(raw, str):
+            return None
+        try:
+            fetched = datetime.fromisoformat(raw)
+        except ValueError:
+            return None
+        if fetched.tzinfo is None:
+            fetched = fetched.replace(tzinfo=timezone.utc)
+        from zoneinfo import ZoneInfo
+
+        return fetched.astimezone(ZoneInfo("America/El_Salvador")).strftime("%d/%m/%Y")
+
     def _is_fresh(self, entry: dict) -> bool:
         raw = entry.get("fetched_at")
         if not isinstance(raw, str):
