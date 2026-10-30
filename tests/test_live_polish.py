@@ -44,3 +44,13 @@ def test_plan_has_one_centa_link():
     out = _publish_plan(text, _Decision("Friday 30, 7:00–10:00 a.m."), "en")
     assert out.count("centa.gob.sv") == 1
     assert out.endswith(CENTA_LINE)
+
+
+def test_no_authorization_wording():
+    from agroclima_agent.pipeline import neutral_product_wording
+    es = neutral_product_wording("Riesgo alto. Los fungicidas permitidos son cobre y triazol. Revise.", "es")
+    assert "permitid" not in es
+    assert "Consulte a un técnico de CENTA o de su cooperativa antes de aplicar cualquier producto." in es
+    en = neutral_product_wording("High risk. Use approved fungicides: copper.", "en")
+    assert "approved" not in en
+    assert "Check with a CENTA or co-op technician before applying any product." in en
