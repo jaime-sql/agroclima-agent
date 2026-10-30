@@ -180,6 +180,19 @@ PLAN_TIMEOUT_SECONDS = 20.0
 PLAN_RETRY_STEP = "plan-retry"
 
 
+def alert_card_text(citations, fetched: str | None, language: str) -> str:
+    """One line per bulletin: title, date, link."""
+    label = "Retrieved" if language == "en" else "Consultado"
+    lines = []
+    for item in citations[:3]:
+        bits = [item.title.strip() or item.url]
+        if fetched:
+            bits.append(f"{label}: {fetched}")
+        bits.append(item.url)
+        lines.append(" — ".join(bits))
+    return "\n".join(lines)
+
+
 def _complete_plan(client: NebiusClient, **kwargs):
     """Plan call with one retry on a live error. Worst case is two short timeouts (~40 s).
 
@@ -578,50 +591,13 @@ def run_agent(
         alert_latency = None
         alert_tokens = None
     else:
-        if lang == "en":
-            alert_user = (
-                f"Department: {department}. Summarize only what is inside the blocks, in English. "
-                "Do not invent an alert.\n\n{blocks}"
-            ).replace("{blocks}", blocks)
-            alert_mock_text = (
-                f"There are {len(official) or len(citations)} search result(s) for {department}. "
-                "Read them as data and confirm at the source."
-            )
-            alert_system = NANO_SYSTEM_EN
-        else:
-            alert_user = (
-                f"Departamento: {department}. Resuma solo lo que esté dentro de los bloques. "
-                "No invente una alerta.\n\n{blocks}"
-            ).replace("{blocks}", blocks)
-            alert_mock_text = (
-                f"Hay {len(official) or len(citations)} resultado(s) de búsqueda para {department}. "
-                "Léalos como datos y confirme en la fuente."
-            )
-            alert_system = NANO_SYSTEM
-        completion = _complete_nano(
-            client,
-            step="alertas-resumen",
-            model=settings.model_nano,
-            system=alert_system,
-            user_text=alert_user,
-            mock_text=alert_mock_text,
-        )
-        alert_text = rewrite_probability(completion.text.strip(), worst)
-        if completion.error or contains_dose(alert_text) or _hidden_from_farmer(alert_text):
-            if lang == "en":
-                alert_text = (
-                    f"{len(citations)} sources were retrieved for {department}. "
-                    "Read the citations. This screen does not recommend a dose."
-                )
-            else:
-                alert_text = (
-                    f"Se recuperaron {len(citations)} fuentes para {department}. "
-                    "Lea las citas. Esta pantalla no recomienda una dosis."
-                )
-        alert_mock = completion.mock
-        alert_model = settings.model_nano
-        alert_latency = completion.latency_ms
-        alert_tokens = completion.tokens
+        # Show only what the source says: title, date and link. No model summary, no risk wording.
+        fetched = getattr(alerts, "fetched_on", lambda _d: None)(department)
+        alert_text = alert_card_text(citations, fetched, lang)
+        alert_mock = False
+        alert_model = "tavily"
+        alert_latency = None
+        alert_tokens = None
     alert_step = StepResult(
         id="alertas",
         title="Alertas oficiales",
